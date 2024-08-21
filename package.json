@@ -1,0 +1,25 @@
+{
+  "name": "commercial-epcs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "homepage": "https://owlks4.github.io/",
+  "scripts": {
+    "dev": "vite",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.1.4"
+  },
+  "dependencies": {
+    "@zip.js/zip.js": "^2.7.48",
+    "geolib": "^3.3.4",
+    "gh-pages": "^6.1.1",
+    "leaflet": "^1.9.4",
+    "leaflet-providers": "^2.0.0",
+    "papaparse": "^5.4.1"
+  }
+}
