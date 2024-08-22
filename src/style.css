@@ -29,6 +29,32 @@ header {
 
 h3 {
   text-align: left;
+  margin-bottom:0.5em;
+}
+
+h4 {
+  text-transform:uppercase;
+  margin-top:0.5em;
+  margin-left:0.5em;
+  margin-bottom:0.3em;
+  letter-spacing: 0.1em;
+  font-size:1em;
+}
+
+th {
+  white-space:nowrap;
+  font-weight: bold;
+}
+
+table {
+  background-color: rgb(10, 10, 10);
+  padding:0 1em 0.5em 0;
+}
+
+td {
+  vertical-align: top;
+  text-align: left;
+  padding:0.5em;
 }
 
 li input[type=radio] {
@@ -42,8 +68,11 @@ ul {
 }
 
 li {
-  white-space:nowrap;
   text-align: left;
+}
+
+ul li {
+  white-space:nowrap;
 }
 
 label {
@@ -93,6 +122,7 @@ input[type=number] {
 }
 
 #bar {
+  width:45vw;
   text-align:center;
   font-size: 1.5em;
   margin: 0.4em 0 0.5em 0;
@@ -104,4 +134,11 @@ input[type=number] {
   -1px 1px 0 rgba(0,0,0,0.25),
   -1px -1px 0 rgba(0,0,0,0.25),
   1px -1px 0 rgba(0,0,0,0.25);
+}
+
+#recs-area {
+  font-size:0.95em;
+  padding-right:1em;
+  overflow-y:auto;
+  height:80%;
 }
