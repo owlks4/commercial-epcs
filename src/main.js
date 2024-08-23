@@ -18,7 +18,35 @@ let columns = null;
 let recommendations = null;
 let schema = null;
 
-const paybackTypes = {"SHORT":0, "MEDIUM":1, "LONG":2};
+const paybackTypes = {"short":0, "SHORT":0, "medium":1, "MEDIUM":1, "long":2, "LONG":2, "other":3, "OTHER":3};
+
+let epcRecsFiltersElement = document.getElementById("epc-recs-filters");
+
+let epcRecCategories = {
+  "Cooling":null,
+  "Hot Water":null,
+  "Envelope":null,
+  "Fuel-switching":null,
+  "Heating":null,
+  "Lighting":null,
+  "Overheating":null,
+  "Renewable energy":null
+}
+
+Object.keys(epcRecCategories).forEach(category => {
+  let div = document.createElement("div");
+  let checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = true;
+  checkbox.id = "checkbox-"+category;
+  checkbox.oninput = () => {alert("Need to actually wire this up to change the map")};
+  let label = document.createElement("label");
+  label.innerText = category;
+  label.setAttribute("for",checkbox.id);
+  div.appendChild(checkbox);
+  div.appendChild(label);
+  epcRecsFiltersElement.appendChild(div);
+});
 
 tryLoadUPRNLookup();
 
@@ -111,12 +139,13 @@ async function tryLoadEmbeddedZip() {
             } else if (index == parseInt(Math.floor(certsLength / 2))){
                 console.log("50% complete. We won't bother listing 75...")
             }
-            L.circleMarker(UPRNLookup[cert.UPRN], {
+            let latLong = UPRNLookup[cert.UPRN];
+            L.circleMarker(latLong, {
                 radius : 5,
                 fillColor: '#0000ff',                
                 fillOpacity: 0.9,
                 opacity: 0,
-              }).on("click",()=>{loadStatsIntoPanel(cert)}).addTo(map);
+              }).on("click",()=>{loadStatsIntoPanel(cert); map.flyTo(latLong, 18);}).addTo(map);
         });
         console.log("Done");
   }
@@ -175,49 +204,44 @@ async function tryLoadEmbeddedZip() {
       console.log("Couldn't find LMK key in recommendations: "+lmk);
       return null;
   }
-
-function appendOrderedListOfType(div,recs,type){
-    let h4 = document.createElement("h4");
-    h4.innerText = type+" payback time:";
-    div.appendChild(h4);
-    let table = document.createElement("table");
-    let thead = document.createElement("thead");
-    thead.innerHTML = "<th>#</th><th>Recommendation</th><th>CO2 impact</th>";
-    table.appendChild(thead);
-    let i = 1;
-    recs.forEach(rec => {
-      if (rec.PAYBACK_TYPE.toLowerCase() == type.toLowerCase()){
-        let tr = document.createElement("tr");        
-        tr.innerHTML = "<td>"+i+"</td><td>"+rec.RECOMMENDATION+"</td><td>"+rec.CO2_IMPACT+"</td>";
-        table.appendChild(tr);
-        i++;
-    }
-  });
-  div.appendChild(table);
-}
   
 function createHTMLfromRecs(recs){
 
-  let uniquePaybackTypes = [];
+  let table = document.createElement("table");
+  let thead = document.createElement("thead");
+  thead.innerHTML = "<th>Recommendation</th><th style='padding:0em 0.5em;'>Payback time</th><th style='padding:0em 0.5em;'>CO2 impact</th>";
+  table.appendChild(thead);
 
-  let div = document.createElement("div");
+  let instanceCountOfPaybackTypes = {}
 
   recs.forEach(rec => {
-    if (!uniquePaybackTypes.includes(rec.PAYBACK_TYPE)){
-      uniquePaybackTypes.push(rec.PAYBACK_TYPE)
+      if (instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] == null){
+        instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] = 1;
+      } else {
+        instanceCountOfPaybackTypes[rec.PAYBACK_TYPE]++;
+      }
+  });
+
+  recs.forEach(rec => {
+    let tr = document.createElement("tr");        
+    tr.innerHTML = "<td>"+rec.RECOMMENDATION+"</td>";
+    if (instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] != null){
+      tr.innerHTML += "<td style='text-align:center;'; rowspan='"+instanceCountOfPaybackTypes[rec.PAYBACK_TYPE]+"'>"+rec.PAYBACK_TYPE.toUpperCase()+"</td>";
+      instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] = null;
     }
+    tr.innerHTML += "<td style='text-align:center;'>"+rec.CO2_IMPACT+"</td>";
+    table.appendChild(tr);
   })
 
-  uniquePaybackTypes.forEach(paybackType => {
-    appendOrderedListOfType(div,recs,paybackType);
-  })
-
-  return div;
+  return table;
 }
 
 function loadStatsIntoPanel(cert){
   let LMK = cert.LMK_KEY;
   let recs = binarySearchByLMKAndReturnAllValidNeighbouringResults(recommendations.data, LMK);
   recsArea.innerHTML = "";
+  let h4 = document.createElement("h4");
+  h4.innerText ="For UPRN "+cert.UPRN+":";
+  recsArea.appendChild(h4);
   recsArea.appendChild(createHTMLfromRecs(recs));
 }

@@ -34,11 +34,11 @@ h3 {
 
 h4 {
   text-transform:uppercase;
-  margin-top:0.5em;
+  font-weight: bold;
+  margin-top:0;
   margin-left:0.5em;
-  margin-bottom:0.3em;
-  letter-spacing: 0.1em;
-  font-size:1em;
+  margin-bottom:0.75em;
+  color:rgb(83, 83, 83);
 }
 
 th {
@@ -47,12 +47,18 @@ th {
 }
 
 table {
-  background-color: rgb(10, 10, 10);
+  background-color: rgb(201, 201, 201);
+  color:black;
   padding:0 1em 0.5em 0;
+  margin-bottom:1em;
+}
+
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
 }
 
 td {
-  vertical-align: top;
   text-align: left;
   padding:0.5em;
 }
@@ -60,6 +66,11 @@ td {
 li input[type=radio] {
   margin-right:0.75em;
 }
+
+input[type=checkbox] {
+  margin-right:0.75em;
+}
+
 
 ul {
   list-style-type: none;
@@ -89,13 +100,27 @@ main{
 }
 
 #map {
-  width:100%;
+  width:55vw;
   height: 95vh;
   position:relative;
   border: 2px solid black;
   border-radius:0.25em;
   filter: brightness(85%);
 }
+
+
+#bar {
+  width:45vw;
+  text-align:center;
+  font-size: 1.5em;
+  margin: 0.4em 0 0.5em 0;
+  padding: 0 1.5em;
+  font-weight:bold;
+  color:white;
+  display:flex;
+  flex-direction:column;
+}
+
 
 input {
   background-color: black;
@@ -121,24 +146,15 @@ input[type=number] {
   flex-direction:row;
 }
 
-#bar {
-  width:45vw;
-  text-align:center;
-  font-size: 1.5em;
-  margin: 0.4em 0 0.5em 0;
-  padding: 0 1.5em;
-  font-weight:bold;
-  color:white;
-  text-shadow:
-  1px 1px 0 rgba(0,0,0,0.25),
-  -1px 1px 0 rgba(0,0,0,0.25),
-  -1px -1px 0 rgba(0,0,0,0.25),
-  1px -1px 0 rgba(0,0,0,0.25);
-}
-
 #recs-area {
   font-size:0.95em;
-  padding-right:1em;
+  padding: 1em 1em 1em 1em;
   overflow-y:auto;
   height:80%;
+  text-align: center;
+  background-color: rgb(240, 240, 240);
+}
+
+#epc-recs-filters {
+  text-align:left;
 }
