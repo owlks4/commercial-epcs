@@ -18,20 +18,36 @@
       <div class="flex">
         <div id="map"></div>
         <div id="bar">
-          <div style="height:fit-content;">
-            <h3>Filter map to properties with EPC recs pertaining to...</h3>
-            <div id="epc-recs-filters">
+          <div style="height:fit-content;display:flex;">
+            <div style="width:100%;">
+              <h3>Filter map to properties with<br>EPC recs pertaining to...</h3>
+              <div id="epc-recs-filters">
               
-            </div>            
-          </div>
-          <div style="height:100%;">
-            <h3>
-              EPC recommendations:
-            </h3>
-            <div id="recs-area">
-  
+              </div>   
+            </div>
+            <div style="width:100%;">
+              <h3><br>with payback time:</h3>
+              <div id="payback-time-filters">
+                <input type="checkbox" name="payback-time-short-checkbox" id="payback-time-short-checkbox" checked>
+                <label for="payback-time-short-checkbox">Short</label>
+                <br>
+                <input type="checkbox" name="payback-time-medium-checkbox" id="payback-time-medium-checkbox" checked>
+                <label for="payback-time-medium-checkbox">Medium</label>
+                <br>
+                <input type="checkbox" name="payback-time-long-checkbox" id="payback-time-long-checkbox" checked>
+                <label for="payback-time-long-checkbox">Long</label>
+                <br>
+                <input type="checkbox" name="payback-time-other-checkbox" id="payback-time-other-checkbox" checked>
+                <label for="payback-time-other-checkbox">Other</label>
+              </div>   
             </div>    
           </div>
+          <h3>
+            EPC recommendations:
+          </h3>
+          <div id="recs-area">
+  
+          </div>   
         </div>
       </div>
     </main>    

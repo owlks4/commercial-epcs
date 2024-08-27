@@ -149,12 +149,13 @@ input[type=number] {
 #recs-area {
   font-size:0.95em;
   padding: 1em 1em 1em 1em;
+  margin-bottom: 1em;
   overflow-y:auto;
-  height:80%;
+  height:100%;
   text-align: center;
   background-color: rgb(240, 240, 240);
 }
 
-#epc-recs-filters {
-  text-align:left;
+#payback-time-filters, #epc-recs-filters {
+  text-align: left;
 }

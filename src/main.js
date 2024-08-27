@@ -4,9 +4,37 @@ import "leaflet-providers";
 import { ZipReader, BlobReader, TextWriter} from '@zip.js/zip.js';
 import { parse } from 'papaparse';
 
-
 let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
 var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
+
+const shortPaybackCheckbox = document.getElementById("payback-time-short-checkbox");
+shortPaybackCheckbox.checked = true;
+shortPaybackCheckbox.oninput = () => {rerenderDatapoints();};
+const mediumPaybackCheckbox = document.getElementById("payback-time-medium-checkbox");
+mediumPaybackCheckbox.checked = true;
+mediumPaybackCheckbox.oninput = () => {rerenderDatapoints();};
+const longPaybackCheckbox = document.getElementById("payback-time-long-checkbox");
+longPaybackCheckbox.checked = true;
+longPaybackCheckbox.oninput = () => {rerenderDatapoints();};
+const otherPaybackCheckbox = document.getElementById("payback-time-other-checkbox");
+otherPaybackCheckbox.checked = true;
+otherPaybackCheckbox.oninput = () => {rerenderDatapoints();};
+
+function isFilterCheckboxCheckedForPaybackType(type){
+  switch (type){
+    case "SHORT":
+      return shortPaybackCheckbox.checked;
+    case "MEDIUM":
+      return mediumPaybackCheckbox.checked;
+    case "LONG":
+      return longPaybackCheckbox.checked;
+    case "OTHER":
+      return otherPaybackCheckbox.checked;
+    default:
+      alert("Unhandled payback time type!")
+      return null;
+  }
+}
 
 let recsArea = document.getElementById("recs-area");
 
@@ -20,28 +48,62 @@ let schema = null;
 
 const paybackTypes = {"short":0, "SHORT":0, "medium":1, "MEDIUM":1, "long":2, "LONG":2, "other":3, "OTHER":3};
 
+let mostRecentlySelectedCert = null;
+
 let epcRecsFiltersElement = document.getElementById("epc-recs-filters");
 
-let epcRecCategories = {
-  "Cooling":null,
-  "Hot Water":null,
-  "Envelope":null,
-  "Fuel-switching":null,
-  "Heating":null,
-  "Lighting":null,
-  "Overheating":null,
-  "Renewable energy":null
+class EPCRecCategory {
+  constructor(displayName, internalName, show){
+    this.displayName = displayName;
+    this.internalName = internalName;
+    this.show = show;
+  }
 }
 
-Object.keys(epcRecCategories).forEach(category => {
+let epcRecCategories = [
+  new EPCRecCategory("Cooling","REC_C", true),
+  new EPCRecCategory("Hot water","REC_W", true),
+  new EPCRecCategory("Envelope","REC_E", true),
+  new EPCRecCategory("Fuel-switching","REC_F", true),
+  new EPCRecCategory("Heating","REC_H", true),
+  new EPCRecCategory("Lighting","REC_L", true),
+  new EPCRecCategory("Overheating","REC_V", true),
+  new EPCRecCategory("Renewable energy","REC_R", true),
+  new EPCRecCategory("Rec listed as 'user'","REC_U", true),
+]
+
+function getEPCRecCategoryByCode(code){
+  if (code[4] == undefined){
+    if (code == "USER"){
+      return getEPCRecCategoryByInternalName("REC_U");
+    }
+  }
+  for (let i = 0; i < epcRecCategories.length; i++){
+    if (epcRecCategories[i].internalName[4] == code[4]){
+      return epcRecCategories[i];
+    }
+  }
+  return null;
+}
+
+function getEPCRecCategoryByInternalName(name){
+  for (let i = 0; i < epcRecCategories.length; i++){
+    if (epcRecCategories[i].internalName == name){
+      return epcRecCategories[i];
+    }
+  }
+  return null;
+}
+
+epcRecCategories.forEach(category => {
   let div = document.createElement("div");
   let checkbox = document.createElement("input");
   checkbox.type = "checkbox";
   checkbox.checked = true;
-  checkbox.id = "checkbox-"+category;
-  checkbox.oninput = () => {alert("Need to actually wire this up to change the map")};
+  checkbox.id = "checkbox-"+category.internalName;
+  checkbox.oninput = (e) => {category.show = e.target.checked; rerenderDatapoints();};
   let label = document.createElement("label");
-  label.innerText = category;
+  label.innerText = category.displayName;
   label.setAttribute("for",checkbox.id);
   div.appendChild(checkbox);
   div.appendChild(label);
@@ -113,9 +175,10 @@ async function tryLoadEmbeddedZip() {
         numFilesProcessed++;
         if (numFilesProcessed == NUM_FILES_FOR_COMPLETE_READ){
             console.log("Embedded zip loaded")
+            console.log("Sorting certs by UPRN...")
+            certificates.data.sort((a,b) => {return a.UPRN == b.UPRN ? 0 : (a.UPRN < b.UPRN ? -1 : 1)});
             console.log("Sorting recs by LMK key...")
             recommendations.data.sort((a,b) => {return a.LMK_KEY == b.LMK_KEY ? 0 : (a.LMK_KEY < b.LMK_KEY ? -1 : 1)});
-            console.log(recommendations);
             displayDatapointsOnMap();
         }
       });
@@ -125,7 +188,7 @@ async function tryLoadEmbeddedZip() {
     }
   }
 
-  function displayDatapointsOnMap(){
+  function displayDatapointsOnMap(){ //ONLY to be used the first time
     let UPRNkeys = Object.keys(UPRNLookup);
     let certsLength = certificates.data.length;
 
@@ -140,14 +203,76 @@ async function tryLoadEmbeddedZip() {
                 console.log("50% complete. We won't bother listing 75...")
             }
             let latLong = UPRNLookup[cert.UPRN];
-            L.circleMarker(latLong, {
+            cert.marker = L.circleMarker(latLong, {
                 radius : 5,
                 fillColor: '#0000ff',                
                 fillOpacity: 0.9,
                 opacity: 0,
-              }).on("click",()=>{loadStatsIntoPanel(cert); map.flyTo(latLong, 18);}).addTo(map);
+              }).on("click",()=>{mostRecentlySelectedCert = cert; loadStatsIntoPanel(cert, false); map.flyTo(latLong, 18);}).addTo(map);
+            cert.recs = binarySearchByLMKAndReturnAllValidNeighbouringResults(recommendations.data, cert.LMK_KEY);
+            if (cert.recs != null){
+              cert.recs.forEach(rec => {
+                cert["HAS_PAYBACK_"+rec.PAYBACK_TYPE.toUpperCase()] = true;
+                epcRecCategories.forEach(category => {
+                  let codeLetter = rec.RECOMMENDATION_CODE[4];
+                  if (codeLetter == undefined){
+                    switch (rec.RECOMMENDATION_CODE){
+                      case "USER":
+                        cert["REC_U"] = true;
+                        break;
+                      default:
+                        alert("! unhandled epc code "+rec.RECOMMENDATION_CODE)
+                      break;
+                    }
+                  } else if (codeLetter == category.internalName[4]){
+                    cert[category.internalName] = true;
+                  }   
+                });
+              });
+            }
         });
         console.log("Done");
+      recommendations.data = null;
+      recommendations = null;
+  }
+
+  function rerenderDatapoints(){
+    certificates.data.forEach((cert,index) => {
+      if (cert.marker == null){
+        return;
+      }
+
+      //check if the datapoint is eligible for being shown, based on the filters that the user has checked:
+
+      let shouldShowBasedOnEPC = false;
+      let shouldShowBasedOnPaybackTime = false;
+      
+      epcRecCategories.forEach(category => {
+        if (category.show && cert[category.internalName]){
+          shouldShowBasedOnEPC = true;
+        }                
+      });
+
+      if (cert.HAS_PAYBACK_SHORT && shortPaybackCheckbox.checked){ //technically these aren't exclusive - a cert can have both a short payback and a long payback - but it doesn't matter which one or how many, as long as the viewer has selected filters that encompass at least one of them. So this exclusionary-looking elseif is actually fine.
+        shouldShowBasedOnPaybackTime = true;
+      } else if (cert.HAS_PAYBACK_MEDIUM && mediumPaybackCheckbox.checked){
+        shouldShowBasedOnPaybackTime = true;
+      } else if (cert.HAS_PAYBACK_LONG && longPaybackCheckbox.checked){
+        shouldShowBasedOnPaybackTime = true;
+      } else if (cert.HAS_PAYBACK_OTHER && otherPaybackCheckbox.checked){
+        shouldShowBasedOnPaybackTime = true;
+      }
+
+      if (shouldShowBasedOnEPC && shouldShowBasedOnPaybackTime){
+        cert.marker.setStyle({fillOpacity:1, opacity:1, interactive:true});
+      } else {
+        cert.marker.setStyle({fillOpacity:0, opacity:0, interactive:false});
+      }
+    });
+
+    if (mostRecentlySelectedCert != null){
+      loadStatsIntoPanel(mostRecentlySelectedCert, true);
+    }
   }
 
   function binarySearchByLMKAndReturnAllValidNeighbouringResults(arr, lmk){
@@ -223,8 +348,9 @@ function createHTMLfromRecs(recs){
   });
 
   recs.forEach(rec => {
-    let tr = document.createElement("tr");        
-    tr.innerHTML = "<td>"+rec.RECOMMENDATION+"</td>";
+    let recCategoryIsHighlighted = getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase());
+    let tr = document.createElement("tr");
+    tr.innerHTML = (recCategoryIsHighlighted?"<td style='background-color:#f7f7a1;'>":"<td>")+rec.RECOMMENDATION+"</td>";
     if (instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] != null){
       tr.innerHTML += "<td style='text-align:center;'; rowspan='"+instanceCountOfPaybackTypes[rec.PAYBACK_TYPE]+"'>"+rec.PAYBACK_TYPE.toUpperCase()+"</td>";
       instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] = null;
@@ -236,12 +362,26 @@ function createHTMLfromRecs(recs){
   return table;
 }
 
-function loadStatsIntoPanel(cert){
-  let LMK = cert.LMK_KEY;
-  let recs = binarySearchByLMKAndReturnAllValidNeighbouringResults(recommendations.data, LMK);
+function loadStatsIntoPanel(cert, isRerender){
+  console.log(cert);
   recsArea.innerHTML = "";
   let h4 = document.createElement("h4");
-  h4.innerText ="For UPRN "+cert.UPRN+":";
+  h4.innerText ="For UPRN "+cert.UPRN;
+  h4.style = "margin-bottom:0;"
   recsArea.appendChild(h4);
-  recsArea.appendChild(createHTMLfromRecs(recs));
+  let inspectionDate = document.createElement("h4");
+  inspectionDate.style = "font-size:0.9em;"
+  inspectionDate.innerText = "(Inspected "+cert.INSPECTION_DATE+")";
+  recsArea.appendChild(inspectionDate);
+  if (!isRerender){
+    recsArea.scrollTop = 0;
+  }
+  if (cert.recs == null){
+    let div = document.createElement("div");
+    div.style = "color:black;";
+    div.innerHTML = "Apparently, this datapoint didn't have any EPC recommendations.<br>(Either that, or there was an LMK key match failure)";
+    recsArea.appendChild(div);
+  } else {
+    recsArea.appendChild(createHTMLfromRecs(cert.recs));
+  }
 }
