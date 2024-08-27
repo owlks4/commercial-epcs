@@ -3,6 +3,7 @@ import 'leaflet'
 import "leaflet-providers";
 import { ZipReader, BlobReader, TextWriter} from '@zip.js/zip.js';
 import { parse } from 'papaparse';
+import { rectangle } from 'leaflet';
 
 let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
 var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
@@ -69,7 +70,7 @@ let epcRecCategories = [
   new EPCRecCategory("Lighting","REC_L", true),
   new EPCRecCategory("Overheating","REC_V", true),
   new EPCRecCategory("Renewable energy","REC_R", true),
-  new EPCRecCategory("Rec listed as 'user'","REC_U", true),
+  new EPCRecCategory("Comment","REC_U", true),
 ]
 
 function getEPCRecCategoryByCode(code){
@@ -176,7 +177,14 @@ async function tryLoadEmbeddedZip() {
         if (numFilesProcessed == NUM_FILES_FOR_COMPLETE_READ){
             console.log("Embedded zip loaded")
             console.log("Sorting certs by UPRN...")
-            certificates.data.sort((a,b) => {return a.UPRN == b.UPRN ? 0 : (a.UPRN < b.UPRN ? -1 : 1)});
+            certificates.data.sort((a,b) => {
+              if (a.UPRN == b.UPRN){  //sort by UPRN and then lodgement date if the UPRNs are the same
+                let lodgeA = Date.parse(a.LODGEMENT_DATETIME);
+                let lodgeB = Date.parse(b.LODGEMENT_DATETIME);
+                return lodgeA == lodgeB ? 0 : (lodgeA < lodgeB ? -1 : 1);
+              } 
+              return a.UPRN < b.UPRN ? -1 : 1;
+            });
             console.log("Sorting recs by LMK key...")
             recommendations.data.sort((a,b) => {return a.LMK_KEY == b.LMK_KEY ? 0 : (a.LMK_KEY < b.LMK_KEY ? -1 : 1)});
             displayDatapointsOnMap();
@@ -188,6 +196,24 @@ async function tryLoadEmbeddedZip() {
     }
   }
 
+  function generateOnClickFunctionForCert(cert){
+      return ()=>{
+        mostRecentlySelectedCert = cert;
+        loadStatsIntoPanel(cert, false);
+        map.flyTo(cert.marker.latlng, 18);
+      }
+  }
+
+  function makeCircleMarker(cert){
+    return L.circleMarker(cert.latLong, {
+      radius : 5,
+      fillColor: '#0000ff',                
+      fillOpacity: 0.9,
+      opacity: 0,
+      interactive:true
+    }).on("click",generateOnClickFunctionForCert(cert)).addTo(map);
+  }
+
   function displayDatapointsOnMap(){ //ONLY to be used the first time
     let UPRNkeys = Object.keys(UPRNLookup);
     let certsLength = certificates.data.length;
@@ -196,19 +222,19 @@ async function tryLoadEmbeddedZip() {
             if (!UPRNkeys.includes(cert.UPRN)){
                 return;
             }
+
+            if (index < certificates.data.length - 1 && certificates.data[index+1].UPRN == cert.UPRN && Date.parse(certificates.data[index+1].LODGEMENT_DATETIME) > Date.parse(cert.LODGEMENT_DATETIME)){
+              return; //then we don't process this datapoint, because the one after it in the list is for the same building but more recent
+            }
             
             if (index == parseInt(Math.floor(certsLength / 4))){
                 console.log("25% complete")
             } else if (index == parseInt(Math.floor(certsLength / 2))){
                 console.log("50% complete. We won't bother listing 75...")
             }
-            let latLong = UPRNLookup[cert.UPRN];
-            cert.marker = L.circleMarker(latLong, {
-                radius : 5,
-                fillColor: '#0000ff',                
-                fillOpacity: 0.9,
-                opacity: 0,
-              }).on("click",()=>{mostRecentlySelectedCert = cert; loadStatsIntoPanel(cert, false); map.flyTo(latLong, 18);}).addTo(map);
+            cert.canPotentiallyExistOnMap = true;
+            cert.latLong = UPRNLookup[cert.UPRN];            
+            cert.marker = makeCircleMarker(cert);
             cert.recs = binarySearchByLMKAndReturnAllValidNeighbouringResults(recommendations.data, cert.LMK_KEY);
             if (cert.recs != null){
               cert.recs.forEach(rec => {
@@ -218,7 +244,9 @@ async function tryLoadEmbeddedZip() {
                   if (codeLetter == undefined){
                     switch (rec.RECOMMENDATION_CODE){
                       case "USER":
-                        cert["REC_U"] = true;
+                        if (!rec.RECOMMENDATION.includes("Insert Recommendation here")){
+                          cert["REC_U"] = true;
+                        }                        
                         break;
                       default:
                         alert("! unhandled epc code "+rec.RECOMMENDATION_CODE)
@@ -238,17 +266,17 @@ async function tryLoadEmbeddedZip() {
 
   function rerenderDatapoints(){
     certificates.data.forEach((cert,index) => {
-      if (cert.marker == null){
+      if (cert.canPotentiallyExistOnMap == null){
         return;
       }
 
-      //check if the datapoint is eligible for being shown, based on the filters that the user has checked:
+      //check if the datapoint is eligible for being shown right now, based on the filters that the user has checked:
 
       let shouldShowBasedOnEPC = false;
       let shouldShowBasedOnPaybackTime = false;
-      
+
       epcRecCategories.forEach(category => {
-        if (category.show && cert[category.internalName]){
+        if (category.show && cert[category.internalName] != null && cert[category.internalName]){
           shouldShowBasedOnEPC = true;
         }                
       });
@@ -262,11 +290,14 @@ async function tryLoadEmbeddedZip() {
       } else if (cert.HAS_PAYBACK_OTHER && otherPaybackCheckbox.checked){
         shouldShowBasedOnPaybackTime = true;
       }
-
+      
       if (shouldShowBasedOnEPC && shouldShowBasedOnPaybackTime){
-        cert.marker.setStyle({fillOpacity:1, opacity:1, interactive:true});
-      } else {
-        cert.marker.setStyle({fillOpacity:0, opacity:0, interactive:false});
+        if (cert.marker == null){  //marker should be present, so create it if it doesn't exist
+          cert.marker = makeCircleMarker(cert).addTo(map);
+        }        
+      } else if (cert.marker != null) { //marker exists but should not be present, so get rid of it
+        map.removeLayer(cert.marker);
+        cert.marker = null;
       }
     });
 
@@ -350,7 +381,11 @@ function createHTMLfromRecs(recs){
   recs.forEach(rec => {
     let recCategoryIsHighlighted = getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase());
     let tr = document.createElement("tr");
-    tr.innerHTML = (recCategoryIsHighlighted?"<td style='background-color:#f7f7a1;'>":"<td>")+rec.RECOMMENDATION+"</td>";
+    let recText = rec.RECOMMENDATION;
+    if (recText == "Insert Recommendation here"){
+      recText += " [sic]"
+    }
+    tr.innerHTML = (recCategoryIsHighlighted?"<td style='background-color:#f7f7a1;'>":"<td>")+recText+"</td>";
     if (instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] != null){
       tr.innerHTML += "<td style='text-align:center;'; rowspan='"+instanceCountOfPaybackTypes[rec.PAYBACK_TYPE]+"'>"+rec.PAYBACK_TYPE.toUpperCase()+"</td>";
       instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] = null;
