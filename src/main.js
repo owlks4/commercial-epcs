@@ -200,7 +200,7 @@ async function tryLoadEmbeddedZip() {
       return ()=>{
         mostRecentlySelectedCert = cert;
         loadStatsIntoPanel(cert, false);
-        map.flyTo(cert.marker.latlng, 18);
+        map.flyTo(cert.latLong, 18);
       }
   }
 
@@ -290,12 +290,32 @@ async function tryLoadEmbeddedZip() {
       } else if (cert.HAS_PAYBACK_OTHER && otherPaybackCheckbox.checked){
         shouldShowBasedOnPaybackTime = true;
       }
+
+      if (!(shouldShowBasedOnEPC && shouldShowBasedOnPaybackTime)){ //we should not present this marker at all
+        if (cert.marker != null) { //marker exists but should not be present, so get rid of it
+          map.removeLayer(cert.marker);
+          cert.marker = null;
+        }
+        return;
+      }
+
+      //if we reach this point, there's a chance that we should present this marker, but we haven't checked that the correct payback and the correct code occur in the same item yet, so we do that now:
+
+      let isTrulyValid = false;
+
+      cert.recs.forEach(rec => {
+        epcRecCategories.forEach(category => {
+          if (category.show && getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE) == category && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase())){
+            isTrulyValid = true;
+          }                
+        });
+      });
       
-      if (shouldShowBasedOnEPC && shouldShowBasedOnPaybackTime){
+      if (isTrulyValid){
         if (cert.marker == null){  //marker should be present, so create it if it doesn't exist
           cert.marker = makeCircleMarker(cert).addTo(map);
         }        
-      } else if (cert.marker != null) { //marker exists but should not be present, so get rid of it
+      } else if (cert.marker != null) { //marker exists but should not be present, so get rid of it. yes we need this in addition to the very similar check from earlier in the function
         map.removeLayer(cert.marker);
         cert.marker = null;
       }
@@ -398,7 +418,6 @@ function createHTMLfromRecs(recs){
 }
 
 function loadStatsIntoPanel(cert, isRerender){
-  console.log(cert);
   recsArea.innerHTML = "";
   let h4 = document.createElement("h4");
   h4.innerText ="For UPRN "+cert.UPRN;
