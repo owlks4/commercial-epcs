@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="./src/style.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <title>Commercial EPCs: certificate & recommendation viewer</title>
   </head>
   <body>
@@ -26,20 +25,35 @@
               </div>   
             </div>
             <div style="width:100%;">
-              <h3><br>with payback time:</h3>
-              <div id="payback-time-filters">
-                <input type="checkbox" name="payback-time-short-checkbox" id="payback-time-short-checkbox" checked>
-                <label for="payback-time-short-checkbox">Short</label>
-                <br>
-                <input type="checkbox" name="payback-time-medium-checkbox" id="payback-time-medium-checkbox" checked>
-                <label for="payback-time-medium-checkbox">Medium</label>
-                <br>
-                <input type="checkbox" name="payback-time-long-checkbox" id="payback-time-long-checkbox" checked>
-                <label for="payback-time-long-checkbox">Long</label>
-                <br>
-                <input type="checkbox" name="payback-time-other-checkbox" id="payback-time-other-checkbox" checked>
-                <label for="payback-time-other-checkbox">Other</label>
-              </div>   
+              <div>
+                <h3><br>with payback time:</h3>
+                <div id="payback-time-filters">
+                  <input type="checkbox" name="payback-time-short-checkbox" id="payback-time-short-checkbox" checked>
+                  <label for="payback-time-short-checkbox">Short</label>
+                  <br>
+                  <input type="checkbox" name="payback-time-medium-checkbox" id="payback-time-medium-checkbox" checked>
+                  <label for="payback-time-medium-checkbox">Medium</label>
+                  <br>
+                  <input type="checkbox" name="payback-time-long-checkbox" id="payback-time-long-checkbox" checked>
+                  <label for="payback-time-long-checkbox">Long</label>
+                  <br>
+                  <input type="checkbox" name="payback-time-other-checkbox" id="payback-time-other-checkbox" checked>
+                  <label for="payback-time-other-checkbox">Other</label>
+                </div>   
+              </div>
+              <div>
+                <h3>and CO2 impact:</h3>
+                <div id="co2-impact-filters">
+                  <input type="checkbox" name="co2-impact-low-checkbox" id="co2-impact-low-checkbox" checked>
+                  <label for="co2-impact-low-checkbox">Low</label>
+                  <br>
+                  <input type="checkbox" name="co2-impact-medium-checkbox" id="co2-impact-medium-checkbox" checked>
+                  <label for="co2-impact-medium-checkbox">Medium</label>
+                  <br>
+                  <input type="checkbox" name="co2-impact-high-checkbox" id="co2-impact-high-checkbox" checked>
+                  <label for="co2-impact-high-checkbox">High</label>
+                </div>   
+              </div>
             </div>    
           </div>
           <h3>

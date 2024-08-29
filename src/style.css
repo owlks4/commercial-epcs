@@ -4,9 +4,6 @@ html {
   background-color:#1f1f1f;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   overflow-x:hidden;
-}
-
-* {
   font-weight: normal;
 }
 
@@ -27,12 +24,18 @@ header {
   align-items: center;
 }
 
+h1 {
+  font-weight:normal;
+}
+
 h3 {
+  font-weight:normal;
   text-align: left;
   margin-bottom:0.5em;
 }
 
 h4 {
+  font-weight:normal;
   text-transform:uppercase;
   font-weight: bold;
   margin-top:0;
@@ -156,6 +159,13 @@ input[type=number] {
   background-color: rgb(240, 240, 240);
 }
 
-#payback-time-filters, #epc-recs-filters {
+#payback-time-filters, #epc-recs-filters, #co2-impact-filters {
   text-align: left;
+}
+
+.factorSelectControl {
+  padding:1em;
+  background-color: rgba(255,255,255,0.9);
+  color:black;
+  text-align:left;
 }

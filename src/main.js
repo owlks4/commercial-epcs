@@ -1,25 +1,28 @@
 import './style.css'
 import 'leaflet'
+import "leaflet/dist/leaflet.css"
 import "leaflet-providers";
 import { ZipReader, BlobReader, TextWriter} from '@zip.js/zip.js';
 import { parse } from 'papaparse';
-import { rectangle } from 'leaflet';
 
 let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
 var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
 
 const shortPaybackCheckbox = document.getElementById("payback-time-short-checkbox");
-shortPaybackCheckbox.checked = true;
-shortPaybackCheckbox.oninput = () => {rerenderDatapoints();};
 const mediumPaybackCheckbox = document.getElementById("payback-time-medium-checkbox");
-mediumPaybackCheckbox.checked = true;
-mediumPaybackCheckbox.oninput = () => {rerenderDatapoints();};
 const longPaybackCheckbox = document.getElementById("payback-time-long-checkbox");
-longPaybackCheckbox.checked = true;
-longPaybackCheckbox.oninput = () => {rerenderDatapoints();};
 const otherPaybackCheckbox = document.getElementById("payback-time-other-checkbox");
-otherPaybackCheckbox.checked = true;
-otherPaybackCheckbox.oninput = () => {rerenderDatapoints();};
+const lowCO2ImpactCheckbox = document.getElementById("co2-impact-low-checkbox");
+const mediumCO2ImpactCheckbox = document.getElementById("co2-impact-medium-checkbox");
+const highCO2ImpactCheckbox = document.getElementById("co2-impact-high-checkbox");
+
+[shortPaybackCheckbox,mediumPaybackCheckbox,longPaybackCheckbox,otherPaybackCheckbox,
+  lowCO2ImpactCheckbox,mediumCO2ImpactCheckbox,highCO2ImpactCheckbox].forEach(
+  (checkbox) => {
+  checkbox.checked = true;
+  checkbox.oninput = () => {rerenderDatapoints();};
+  }
+);
 
 function isFilterCheckboxCheckedForPaybackType(type){
   switch (type){
@@ -36,6 +39,22 @@ function isFilterCheckboxCheckedForPaybackType(type){
       return null;
   }
 }
+
+function isFilterCheckboxCheckedForCO2Impact(impact){
+  switch (impact){
+    case "LOW":
+      return lowCO2ImpactCheckbox.checked;
+    case "MEDIUM":
+      return mediumCO2ImpactCheckbox.checked;
+    case "HIGH":
+      return highCO2ImpactCheckbox.checked;
+    default:
+      alert("Unhandled CO2 impact type: "+impact)
+      return null;
+  }
+}
+
+let mappableFactors = ["TEST","TEST2"]
 
 let recsArea = document.getElementById("recs-area");
 
@@ -305,7 +324,7 @@ async function tryLoadEmbeddedZip() {
 
       cert.recs.forEach(rec => {
         epcRecCategories.forEach(category => {
-          if (category.show && getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE) == category && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase())){
+          if (category.show && getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE) == category && isFilterCheckboxCheckedForCO2Impact(rec.CO2_IMPACT.toUpperCase()) && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase())){
             isTrulyValid = true;
           }                
         });
@@ -399,7 +418,7 @@ function createHTMLfromRecs(recs){
   });
 
   recs.forEach(rec => {
-    let recCategoryIsHighlighted = getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase());
+    let recCategoryIsHighlighted = getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForCO2Impact(rec.CO2_IMPACT.toUpperCase()) && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase());
     let tr = document.createElement("tr");
     let recText = rec.RECOMMENDATION;
     if (recText == "Insert Recommendation here"){
@@ -439,3 +458,35 @@ function loadStatsIntoPanel(cert, isRerender){
     recsArea.appendChild(createHTMLfromRecs(cert.recs));
   }
 }
+
+let FactorSelectControl = L.Control.extend({ 
+    _container: null,
+    options: {position: 'topright', },
+
+    onAdd: function (map) {
+      var div = L.DomUtil.create('div');
+      div.className = "factorSelectControl";
+      let title = document.createElement("div");
+      title.innerHTML = "<strong>Datapoint colour</strong>";
+      div.appendChild(title);
+
+      mappableFactors.forEach(factor => {
+        let radioButton = document.createElement("input");
+        radioButton.type = "radio";
+        radioButton.id = factor;
+        radioButton.setAttribute("name",factor)
+        let label = document.createElement("label");
+        label.innerText = factor;
+        label.setAttribute("for",factor);
+        div.appendChild(radioButton);
+        div.appendChild(label);
+        div.appendChild(document.createElement("br"));
+      });
+
+      this._div = div;      
+      return this._div;
+    }
+  });
+
+let factorSelectControl = new FactorSelectControl();
+factorSelectControl.addTo(map);
