@@ -24,6 +24,85 @@ const highCO2ImpactCheckbox = document.getElementById("co2-impact-high-checkbox"
   }
 );
 
+class MappableFactor {
+    constructor(displayName, internalName, colScaleReference){
+      this.displayName = displayName;
+      this.internalName = internalName;
+      this.colScaleReference = colScaleReference;
+    }
+
+    getColorForValue(value){
+      if (typeof value == "string"){
+        return this.colScaleReference(value);
+      } else {
+        alert("Continuous legend elements not yet implemented");
+      }
+    }
+}
+
+let EPCbandColours = {
+  "A+":"rgb(255,255,255)","A":"rgb(4,134,86)","B":"rgb(26,175,91)","C":"rgb(141,197,62)","D":"rgb(253,204,3)",
+  "E":"rgb(249,172,100)", "F":"rgb(242,138,32)", "G":"rgb(237,28,57)", "INVALID!":"rgb(0,0,0)"
+}
+
+let fuels = {
+  "Biogas":"#538f53",
+  "Biomass":"#1f5e1f",
+  "District Heating":"#910038",
+  "Dual Fuel Appliances (Mineral + Wood)":"#b05510",
+  "Grid Displaced Electricity":"#2c60db",
+  "Grid Supplied Electricity":"#e0d612",
+  "LPG":"#6e6760",
+  "Natural Gas":"#9e9e9e",
+  "Oil":"#1f1c1a",
+  "Other":"#7a28b5",
+  "Smokeless Fuel (inc Coke)":"#547987",
+  "Waste Heat":"#a6178c",
+}
+
+let mappableFactors = [
+  new MappableFactor("None (default to blue)","NONE",null),
+  new MappableFactor("EPC band","ASSET_RATING_BAND",
+    (value)=>{
+      let col = EPCbandColours[value];
+      if (col == null){
+        alert("Unhandled EPC rating: "+value);
+        return null;
+      } else {
+        return col;
+      }
+    }
+  ),
+  new MappableFactor("Main heating fuel","MAIN_HEATING_FUEL",
+    (value)=>{
+      let col = fuels[value];
+      if (col == null){
+        alert("Unhandled fuel: "+value);
+        return null;
+      } else {
+        return col;
+      }
+    }
+  )
+];
+
+let recsArea = document.getElementById("recs-area");
+
+L.tileLayer.provider("OpenStreetMap.Mapnik").addTo(map);
+
+let UPRNLookup = {};
+let certificates = null;
+let columns = null;
+let recommendations = null;
+let schema = null;
+
+const paybackTypes = {"short":0, "SHORT":0, "medium":1, "MEDIUM":1, "long":2, "LONG":2, "other":3, "OTHER":3};
+
+let mostRecentlySelectedCert = null;
+
+let epcRecsFiltersElement = document.getElementById("epc-recs-filters");
+
+
 function isFilterCheckboxCheckedForPaybackType(type){
   switch (type){
     case "SHORT":
@@ -54,23 +133,10 @@ function isFilterCheckboxCheckedForCO2Impact(impact){
   }
 }
 
-let mappableFactors = ["TEST","TEST2"]
 
-let recsArea = document.getElementById("recs-area");
-
-L.tileLayer.provider("OpenStreetMap.Mapnik").addTo(map);
-
-let UPRNLookup = {};
-let certificates = null;
-let columns = null;
-let recommendations = null;
-let schema = null;
-
-const paybackTypes = {"short":0, "SHORT":0, "medium":1, "MEDIUM":1, "long":2, "LONG":2, "other":3, "OTHER":3};
-
-let mostRecentlySelectedCert = null;
-
-let epcRecsFiltersElement = document.getElementById("epc-recs-filters");
+function shouldRecBeHighlighted(rec){
+  return getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForCO2Impact(rec.CO2_IMPACT.toUpperCase()) && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase())
+}
 
 class EPCRecCategory {
   constructor(displayName, internalName, show){
@@ -223,14 +289,31 @@ async function tryLoadEmbeddedZip() {
       }
   }
 
-  function makeCircleMarker(cert){
-    return L.circleMarker(cert.latLong, {
+  function makeCircleMarker(cert, factorToMap){
+
+    let fillCol = '#0000ff';
+    let factorValue = null;
+
+    if (factorToMap != null){
+      factorValue = cert[factorToMap.internalName];
+      fillCol = factorToMap.getColorForValue(factorValue);
+    }
+
+    let circleMarker = L.circleMarker(cert.latLong, {
       radius : 5,
-      fillColor: '#0000ff',                
+      fillColor: fillCol,                
       fillOpacity: 0.9,
-      opacity: 0,
+      color: "black",
+      weight:1,
+      opacity: factorToMap == null ? 0 : 0.9,
       interactive:true
     }).on("click",generateOnClickFunctionForCert(cert)).addTo(map);
+
+    if (factorValue != null){
+      circleMarker.bindTooltip(factorToMap.displayName +": "+String(factorValue))
+    }
+
+    return circleMarker;
   }
 
   function displayDatapointsOnMap(){ //ONLY to be used the first time
@@ -253,7 +336,7 @@ async function tryLoadEmbeddedZip() {
             }
             cert.canPotentiallyExistOnMap = true;
             cert.latLong = UPRNLookup[cert.UPRN];            
-            cert.marker = makeCircleMarker(cert);
+            cert.marker = makeCircleMarker(cert,null);
             cert.recs = binarySearchByLMKAndReturnAllValidNeighbouringResults(recommendations.data, cert.LMK_KEY);
             if (cert.recs != null){
               cert.recs.forEach(rec => {
@@ -281,12 +364,27 @@ async function tryLoadEmbeddedZip() {
         console.log("Done");
       recommendations.data = null;
       recommendations = null;
+      mappableFactors.forEach((factor) => {
+        factor.radioButton.disabled = false;
+      });
   }
 
   function rerenderDatapoints(){
     certificates.data.forEach((cert,index) => {
       if (cert.canPotentiallyExistOnMap == null){
         return;
+      }
+
+      let factorToMap = null;
+
+      for (let i = 0; i < mappableFactors.length; i++){
+        if (mappableFactors[i].radioButton.checked){
+          factorToMap = mappableFactors[i];
+        }
+      }
+
+      if (factorToMap.internalName == "NONE"){
+        factorToMap = null;
       }
 
       //check if the datapoint is eligible for being shown right now, based on the filters that the user has checked:
@@ -323,20 +421,18 @@ async function tryLoadEmbeddedZip() {
       let isTrulyValid = false;
 
       cert.recs.forEach(rec => {
-        epcRecCategories.forEach(category => {
-          if (category.show && getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE) == category && isFilterCheckboxCheckedForCO2Impact(rec.CO2_IMPACT.toUpperCase()) && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase())){
+          if (shouldRecBeHighlighted(rec)){
             isTrulyValid = true;
-          }                
-        });
+          }
       });
-      
-      if (isTrulyValid){
-        if (cert.marker == null){  //marker should be present, so create it if it doesn't exist
-          cert.marker = makeCircleMarker(cert).addTo(map);
-        }        
-      } else if (cert.marker != null) { //marker exists but should not be present, so get rid of it. yes we need this in addition to the very similar check from earlier in the function
+
+      if (cert.marker != null){ //delete the old one to ensure that it gets its new colour if required, when it's recreated immediately afterwards
         map.removeLayer(cert.marker);
         cert.marker = null;
+      }
+      
+      if (isTrulyValid){
+        cert.marker = makeCircleMarker(cert, factorToMap).addTo(map);  
       }
     });
 
@@ -418,7 +514,7 @@ function createHTMLfromRecs(recs){
   });
 
   recs.forEach(rec => {
-    let recCategoryIsHighlighted = getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForCO2Impact(rec.CO2_IMPACT.toUpperCase()) && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase());
+    let recCategoryIsHighlighted = shouldRecBeHighlighted(rec);
     let tr = document.createElement("tr");
     let recText = rec.RECOMMENDATION;
     if (recText == "Insert Recommendation here"){
@@ -470,15 +566,22 @@ let FactorSelectControl = L.Control.extend({
       title.innerHTML = "<strong>Datapoint colour</strong>";
       div.appendChild(title);
 
-      mappableFactors.forEach(factor => {
-        let radioButton = document.createElement("input");
-        radioButton.type = "radio";
-        radioButton.id = factor;
-        radioButton.setAttribute("name",factor)
+      mappableFactors.forEach((factor,index) => {
+        factor.radioButton = document.createElement("input");
+        factor.radioButton.type = "radio";        
+        factor.radioButton.id = factor.internalName;
+        factor.radioButton.setAttribute("name","mappableFactorsRadioButtons")
+        factor.radioButton.disabled = true;
+        if (index == 0){
+          factor.radioButton.checked = true;
+        }
+        factor.radioButton.oninput = (e)=>{
+            rerenderDatapoints();
+        }
         let label = document.createElement("label");
-        label.innerText = factor;
-        label.setAttribute("for",factor);
-        div.appendChild(radioButton);
+        label.innerText = factor.displayName;
+        label.setAttribute("for",factor.radioButton.id);
+        div.appendChild(factor.radioButton);
         div.appendChild(label);
         div.appendChild(document.createElement("br"));
       });

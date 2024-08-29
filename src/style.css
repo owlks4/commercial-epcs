@@ -24,6 +24,35 @@ header {
   align-items: center;
 }
 
+main{
+  text-align:center;
+  margin:auto;
+  position:relative;
+  width:100vw;
+  height:95vh;
+}
+
+#map {
+  width:55vw;
+  height: 95vh;
+  position:relative;
+  border: 2px solid black;
+  border-radius:0.25em;
+  filter: brightness(85%);
+}
+
+#bar {
+  width:45vw;
+  text-align:center;
+  font-size: 1.5em;
+  margin: 0.4em 0 0.5em 0;
+  padding: 0 1.5em;
+  font-weight:bold;
+  color:white;
+  display:flex;
+  flex-direction:column;
+}
+
 h1 {
   font-weight:normal;
 }
@@ -66,27 +95,8 @@ td {
   padding:0.5em;
 }
 
-li input[type=radio] {
-  margin-right:0.75em;
-}
-
 input[type=checkbox] {
   margin-right:0.75em;
-}
-
-
-ul {
-  list-style-type: none;
-  margin: 0;
-  padding: 0 1em;
-}
-
-li {
-  text-align: left;
-}
-
-ul li {
-  white-space:nowrap;
 }
 
 label {
@@ -94,52 +104,11 @@ label {
   white-space:nowrap;
 }
 
-main{
-  text-align:center;
-  margin:auto;
-  position:relative;
-  width:100vw;
-  height:95vh;
-}
-
-#map {
-  width:55vw;
-  height: 95vh;
-  position:relative;
-  border: 2px solid black;
-  border-radius:0.25em;
-  filter: brightness(85%);
-}
-
-
-#bar {
-  width:45vw;
-  text-align:center;
-  font-size: 1.5em;
-  margin: 0.4em 0 0.5em 0;
-  padding: 0 1.5em;
-  font-weight:bold;
-  color:white;
-  display:flex;
-  flex-direction:column;
-}
-
-
 input {
   background-color: black;
   color: white;
   font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-weight:bold;
-}
-
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-input[type=number] {
-  -moz-appearance: textfield;
 }
 
 .flex {
