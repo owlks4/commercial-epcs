@@ -29,11 +29,18 @@ class MappableFactor {
       this.displayName = displayName;
       this.internalName = internalName;
       this.colScaleReference = colScaleReference;
+      this.checkedSubBoxes = {};
     }
 
     getColorForValue(value){
       if (typeof value == "string"){
-        return this.colScaleReference(value);
+        let col = this.colScaleReference[value];
+        if (col == null){
+          alert("Unhandled "+this.internalName+" value: "+value);
+          return null;
+        } else {
+          return col;
+        }
       } else {
         alert("Continuous legend elements not yet implemented");
       }
@@ -41,7 +48,7 @@ class MappableFactor {
 }
 
 let EPCbandColours = {
-  "A+":"rgb(255,255,255)","A":"rgb(4,134,86)","B":"rgb(26,175,91)","C":"rgb(141,197,62)","D":"rgb(253,204,3)",
+  "A+":"rgb(87,127,247)","A":"rgb(4,134,86)","B":"rgb(26,175,91)","C":"rgb(141,197,62)","D":"rgb(253,204,3)",
   "E":"rgb(249,172,100)", "F":"rgb(242,138,32)", "G":"rgb(237,28,57)", "INVALID!":"rgb(0,0,0)"
 }
 
@@ -62,28 +69,8 @@ let fuels = {
 
 let mappableFactors = [
   new MappableFactor("None (default to blue)","NONE",null),
-  new MappableFactor("EPC band","ASSET_RATING_BAND",
-    (value)=>{
-      let col = EPCbandColours[value];
-      if (col == null){
-        alert("Unhandled EPC rating: "+value);
-        return null;
-      } else {
-        return col;
-      }
-    }
-  ),
-  new MappableFactor("Main heating fuel","MAIN_HEATING_FUEL",
-    (value)=>{
-      let col = fuels[value];
-      if (col == null){
-        alert("Unhandled fuel: "+value);
-        return null;
-      } else {
-        return col;
-      }
-    }
-  )
+  new MappableFactor("EPC band","ASSET_RATING_BAND",EPCbandColours),
+  new MappableFactor("Main heating fuel","MAIN_HEATING_FUEL",fuels)
 ];
 
 let recsArea = document.getElementById("recs-area");
@@ -326,7 +313,7 @@ async function tryLoadEmbeddedZip() {
             }
 
             if (index < certificates.data.length - 1 && certificates.data[index+1].UPRN == cert.UPRN && Date.parse(certificates.data[index+1].LODGEMENT_DATETIME) > Date.parse(cert.LODGEMENT_DATETIME)){
-              return; //then we don't process this datapoint, because the one after it in the list is for the same building but more recent
+              return; //and so in this case, we don't process this datapoint, because the one after it in the list is for the same building but more recent
             }
             
             if (index == parseInt(Math.floor(certsLength / 4))){
@@ -414,6 +401,23 @@ async function tryLoadEmbeddedZip() {
           cert.marker = null;
         }
         return;
+      }
+
+      //check the legend checkboxes (EPC rating etc)
+
+      for (let i = 0; i < mappableFactors.length; i++){
+        let factor = mappableFactors[i];
+
+        if (factor.internalName != "NONE" && factor.radioButton != null && factor.radioButton.checked){
+          if (!factor.checkedSubBoxes[cert[factor.internalName]]){ //then it fails the check
+            if (cert.marker != null) { //remove its marker if it exists
+              map.removeLayer(cert.marker);
+              cert.marker = null;
+            }
+            return;
+          }
+          break;
+        }
       }
 
       //if we reach this point, there's a chance that we should present this marker, but we haven't checked that the correct payback and the correct code occur in the same item yet, so we do that now:
@@ -560,7 +564,8 @@ let FactorSelectControl = L.Control.extend({
     options: {position: 'topright', },
 
     onAdd: function (map) {
-      var div = L.DomUtil.create('div');
+      var megaDiv = L.DomUtil.create('div');
+      let div = document.createElement("div");
       div.className = "factorSelectControl";
       let title = document.createElement("div");
       title.innerHTML = "<strong>Datapoint colour</strong>";
@@ -576,6 +581,12 @@ let FactorSelectControl = L.Control.extend({
           factor.radioButton.checked = true;
         }
         factor.radioButton.oninput = (e)=>{
+            if (factor.internalName == "NONE"){
+              this.closeAccordion();
+            }
+            else if (e.target.checked){
+              this.openAccordion(factor);
+            }
             rerenderDatapoints();
         }
         let label = document.createElement("label");
@@ -586,10 +597,67 @@ let FactorSelectControl = L.Control.extend({
         div.appendChild(document.createElement("br"));
       });
 
-      this._div = div;      
+      this.accordion = document.createElement("div");
+      this.accordion.className = "factorSelectControl accordion";
+
+      megaDiv.appendChild(div);
+      megaDiv.appendChild(this.accordion);
+      this._div = megaDiv;
+      L.DomEvent.disableClickPropagation(this._div);
       return this._div;
+    },
+
+    openAccordion(factor){
+      this.accordion.innerHTML = "";
+      let legendTitle = document.createElement("span");
+      legendTitle.innerHTML = "<strong>Legend</strong><br>"
+      this.accordion.appendChild(legendTitle);
+
+      Object.keys(factor.colScaleReference).forEach((key)=>{
+        this.accordion.appendChild(makeLegendCheckbox(key, factor.colScaleReference[key], factor));
+      });
+
+      this.accordion.style = "max-height:fit-content;";
+    },
+
+    closeAccordion(){
+      this.accordion.innerHTML = "";
+      this.accordion.style = "";
     }
   });
 
 let factorSelectControl = new FactorSelectControl();
 factorSelectControl.addTo(map);
+
+function makeLegendCheckbox(labelText, color, factor){
+  let div = document.createElement("div");
+  div.style="display:flex;margin-bottom:0.15em;"
+
+  factor.checkedSubBoxes[labelText] = true;
+
+  let checkbox = document.createElement("span");
+  checkbox.className = "legend-checkbox checked";
+  checkbox.checked = true;
+  checkbox.style = "background-color:"+color;
+  checkbox.innerText = "✔";
+  div.onclick = (e) => {
+    if (checkbox.className.includes("checked")){
+      checkbox.className = "legend-checkbox"; //then disable it
+      checkbox.style = "";
+      checkbox.checked = false;
+      factor.checkedSubBoxes[labelText] = false;      
+    } else {
+      checkbox.className = "legend-checkbox checked"; //then enable it
+      checkbox.style = "background-color:"+color;
+      checkbox.checked = true;
+      factor.checkedSubBoxes[labelText] = true;
+    }
+    rerenderDatapoints();
+  };
+  let labelDiv = document.createElement("div");
+  labelDiv.innerText = labelText;
+  labelDiv.style="user-select:none;width:fit-content;margin-left:0.35em";
+  div.appendChild(checkbox);
+  div.appendChild(labelDiv);
+  return div;
+}

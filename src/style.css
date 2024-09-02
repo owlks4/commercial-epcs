@@ -133,8 +133,40 @@ input {
 }
 
 .factorSelectControl {
-  padding:1em;
+  padding:1em 1em 0em 1em;
   background-color: rgba(255,255,255,0.9);
   color:black;
   text-align:left;
+  height:fit-content;
+  max-width:15em;
+}
+
+.accordion {
+  max-height:"0em";
+  overflow:hidden;
+  transition: max-height 1s;
+}
+
+.legend-checkbox {
+  width:1em;
+  height:1em;
+  line-height:1;
+  text-align:center;
+  user-select:none;
+  pointer-events: all !important;
+  display:inline-block;
+  padding:1px;
+  cursor:pointer;
+  border-radius:3px;
+  border: 1px solid rgb(55,55,55);
+  background-color:rgb(0, 0, 0, 0.1);
+  color:transparent;
+}
+
+.legend-checkbox:hover {
+  filter:brightness(110%);
+}
+
+.legend-checkbox.checked {
+  color:white;
 }
