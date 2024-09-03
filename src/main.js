@@ -5,6 +5,30 @@ import "leaflet-providers";
 import { ZipReader, BlobReader, TextWriter} from '@zip.js/zip.js';
 import { parse } from 'papaparse';
 
+let veil = document.getElementById("veil");
+veil.onclick = ()=>{
+  let input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/zip";
+  
+  input.oninput = () => {
+    let file = input.files[0];
+    let reader = new FileReader();
+      
+    reader.readAsDataURL(file);
+      
+    reader.onload = function() {
+      tryLoadZipFromUrl(reader.result);
+    };
+      
+    reader.onerror = function() {
+      console.log(reader.error);
+    };
+  };
+
+  input.click();
+};
+
 let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
 var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
 
@@ -75,7 +99,7 @@ let mappableFactors = [
 
 let recsArea = document.getElementById("recs-area");
 
-L.tileLayer.provider("OpenStreetMap.Mapnik").addTo(map);
+L.tileLayer.provider("Esri.WorldStreetMap").addTo(map);
 
 let UPRNLookup = {};
 let certificates = null;
@@ -209,12 +233,11 @@ async function tryLoadUPRNLookup(){
       } catch (error) {
         console.error(error.message);
       }
-    await tryLoadEmbeddedZip();
+   // await tryLoadEmbeddedZip();
 }
 
-async function tryLoadEmbeddedZip() {
-    const url = "./epc.zip";
-    console.log("Trying to load embedded zip...")
+async function tryLoadZipFromUrl(url) {
+    console.log("Trying to load zip...")
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -247,7 +270,7 @@ async function tryLoadEmbeddedZip() {
         }
         numFilesProcessed++;
         if (numFilesProcessed == NUM_FILES_FOR_COMPLETE_READ){
-            console.log("Embedded zip loaded")
+            console.log("Zip loaded")
             console.log("Sorting certs by UPRN...")
             certificates.data.sort((a,b) => {
               if (a.UPRN == b.UPRN){  //sort by UPRN and then lodgement date if the UPRNs are the same
@@ -256,13 +279,14 @@ async function tryLoadEmbeddedZip() {
                 return lodgeA == lodgeB ? 0 : (lodgeA < lodgeB ? -1 : 1);
               } 
               return a.UPRN < b.UPRN ? -1 : 1;
-            });
+            });            
             console.log("Sorting recs by LMK key...")
             recommendations.data.sort((a,b) => {return a.LMK_KEY == b.LMK_KEY ? 0 : (a.LMK_KEY < b.LMK_KEY ? -1 : 1)});
-            displayDatapointsOnMap();
+            geolocateDatapoints();
         }
       });
       await zipReader.close();
+      veil.style = "display:none";
     } catch (error) {
       console.error(error.message);
     }
@@ -303,9 +327,11 @@ async function tryLoadEmbeddedZip() {
     return circleMarker;
   }
 
-  function displayDatapointsOnMap(){ //ONLY to be used the first time
+  function geolocateDatapoints(){ //ONLY to be used the first time
     let UPRNkeys = Object.keys(UPRNLookup);
     let certsLength = certificates.data.length;
+
+        let newCertsData = [];
 
         certificates.data.forEach((cert,index) => {
             if (!UPRNkeys.includes(cert.UPRN)){
@@ -322,6 +348,7 @@ async function tryLoadEmbeddedZip() {
                 console.log("50% complete. We won't bother listing 75...")
             }
             cert.canPotentiallyExistOnMap = true;
+            newCertsData.push(cert);
             cert.latLong = UPRNLookup[cert.UPRN];            
             cert.marker = makeCircleMarker(cert,null);
             cert.recs = binarySearchByLMKAndReturnAllValidNeighbouringResults(recommendations.data, cert.LMK_KEY);
@@ -349,6 +376,10 @@ async function tryLoadEmbeddedZip() {
             }
         });
         console.log("Done");
+
+      certificates.data = null;
+      certificates.data = newCertsData; //we transfer the new array (featuring only the target area) into certificates.data, just so that we're not holding the entire city in memory all the time
+      UPRNLookup = null; //freeing up even more memory because we don't need to geolocate any more...
       recommendations.data = null;
       recommendations = null;
       mappableFactors.forEach((factor) => {
@@ -536,12 +567,31 @@ function createHTMLfromRecs(recs){
   return table;
 }
 
+function composeAddress(cert){
+  let addr = ""
+
+  if (cert.ADDRESS1 != ""){
+    addr += cert.ADDRESS1+" ";
+  }
+  if (cert.ADDRESS2 != ""){
+    addr += cert.ADDRESS2+" ";
+  }
+  if (cert.ADDRESS3 != ""){
+    addr += cert.ADDRESS3;
+  }
+  return addr;
+}
+
 function loadStatsIntoPanel(cert, isRerender){
   recsArea.innerHTML = "";
   let h4 = document.createElement("h4");
   h4.innerText ="For UPRN "+cert.UPRN;
   h4.style = "margin-bottom:0;"
   recsArea.appendChild(h4);
+  let otherH4 = document.createElement("h4");
+  otherH4.innerText = composeAddress(cert);
+  otherH4.style = "margin-bottom:0;"
+  recsArea.appendChild(otherH4);
   let inspectionDate = document.createElement("h4");
   inspectionDate.style = "font-size:0.9em;"
   inspectionDate.innerText = "(Inspected "+cert.INSPECTION_DATE+")";
@@ -594,7 +644,7 @@ let FactorSelectControl = L.Control.extend({
         label.setAttribute("for",factor.radioButton.id);
         div.appendChild(factor.radioButton);
         div.appendChild(label);
-        div.appendChild(document.createElement("br"));
+        div.appendChild(document.createElement("br"));      
       });
 
       this.accordion = document.createElement("div");
@@ -644,12 +694,10 @@ function makeLegendCheckbox(labelText, color, factor){
     if (checkbox.className.includes("checked")){
       checkbox.className = "legend-checkbox"; //then disable it
       checkbox.style = "";
-      checkbox.checked = false;
       factor.checkedSubBoxes[labelText] = false;      
     } else {
       checkbox.className = "legend-checkbox checked"; //then enable it
       checkbox.style = "background-color:"+color;
-      checkbox.checked = true;
       factor.checkedSubBoxes[labelText] = true;
     }
     rerenderDatapoints();

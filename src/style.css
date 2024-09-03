@@ -170,3 +170,29 @@ input {
 .legend-checkbox.checked {
   color:white;
 }
+
+#veil {
+  display:flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color:black;
+  background-color:rgb(255,255,255,0.9);
+  position:absolute;
+  width:100vw;
+  height:100vh;
+  top:0;
+  left:0;
+  cursor:pointer;
+}
+
+#veil * :not(a){
+  pointer-events:none;
+}
+
+h1 {
+  display:inline-block;
+  text-align:center;
+  font-size: 1.8em;
+  font-weight: bold;
+}
