@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css"
 import "leaflet-providers";
 import { ZipReader, BlobReader, TextWriter} from '@zip.js/zip.js';
 import { parse } from 'papaparse';
+import UPRNlookupUrl from '/UPRNlookup.csv?url'
 
 let veil = document.getElementById("veil");
 veil.onclick = ()=>{
@@ -25,7 +26,6 @@ veil.onclick = ()=>{
       console.log(reader.error);
     };
   };
-
   input.click();
 };
 
@@ -210,13 +210,11 @@ epcRecCategories.forEach(category => {
 tryLoadUPRNLookup();
 
 async function tryLoadUPRNLookup(){
-    const url = "./UPRNlookup.csv";
     try {
-        const response = await fetch(url);
+        const response = await fetch(UPRNlookupUrl);
         if (!response.ok) {
           throw new Error(`Response status: ${response.status}`);
         }
-        console.log("Loading UPRN lookup...")
         const csv = parse(await response.text(),{header:true, transform:(a,b)=>{if (b == "latitude" || b == "longitude"){return parseFloat(a)} else {return a}}});
         csv.data.forEach(item => {
             if (item.uprn == ""){
@@ -233,7 +231,23 @@ async function tryLoadUPRNLookup(){
       } catch (error) {
         console.error(error.message);
       }
-   // await tryLoadEmbeddedZip();
+}
+
+function scrOrDescr(UPRN){
+  if (UPRN == null){
+    return null;
+  }
+  UPRN = UPRN.trim();
+  let newUPRN = new Array(12);
+  for (let i = 0; i < UPRN.length; i++){
+    let c = UPRN[i];
+    if (i < 6){
+      newUPRN[i] = c;
+    } else {
+      newUPRN[i] = c != "0" ? String(10 - parseInt(c)) : c;
+    }
+  }
+  return newUPRN.join("")
 }
 
 async function tryLoadZipFromUrl(url) {
@@ -334,10 +348,10 @@ async function tryLoadZipFromUrl(url) {
         let newCertsData = [];
 
         certificates.data.forEach((cert,index) => {
-            if (!UPRNkeys.includes(cert.UPRN)){
+            if (!UPRNkeys.includes(scrOrDescr(cert.UPRN))){
                 return;
             }
-
+           
             if (index < certificates.data.length - 1 && certificates.data[index+1].UPRN == cert.UPRN && Date.parse(certificates.data[index+1].LODGEMENT_DATETIME) > Date.parse(cert.LODGEMENT_DATETIME)){
               return; //and so in this case, we don't process this datapoint, because the one after it in the list is for the same building but more recent
             }
@@ -349,7 +363,7 @@ async function tryLoadZipFromUrl(url) {
             }
             cert.canPotentiallyExistOnMap = true;
             newCertsData.push(cert);
-            cert.latLong = UPRNLookup[cert.UPRN];            
+            cert.latLong = UPRNLookup[scrOrDescr(cert.UPRN)];
             cert.marker = makeCircleMarker(cert,null);
             cert.recs = binarySearchByLMKAndReturnAllValidNeighbouringResults(recommendations.data, cert.LMK_KEY);
             if (cert.recs != null){
