@@ -2,9 +2,11 @@ import './style.css'
 import 'leaflet'
 import "leaflet/dist/leaflet.css"
 import "leaflet-providers";
-import { ZipReader, BlobReader, TextWriter} from '@zip.js/zip.js';
+import { ZipReader, BlobReader, TextWriter, TextReader} from '@zip.js/zip.js';
 import { parse } from 'papaparse';
-import UPRNlookupUrl from '/UPRNlookup.csv?url'
+
+let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
+var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
 
 let veil = document.getElementById("veil");
 veil.onclick = ()=>{
@@ -29,9 +31,6 @@ veil.onclick = ()=>{
   input.click();
 };
 
-let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
-var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
-
 const shortPaybackCheckbox = document.getElementById("payback-time-short-checkbox");
 const mediumPaybackCheckbox = document.getElementById("payback-time-medium-checkbox");
 const longPaybackCheckbox = document.getElementById("payback-time-long-checkbox");
@@ -54,6 +53,14 @@ class MappableFactor {
       this.internalName = internalName;
       this.colScaleReference = colScaleReference;
       this.checkedSubBoxes = {};
+      this.categoricTooltipTexts = null
+
+      if (this.colScaleReference != null){
+        this.categoricTooltipTexts = {};
+        Object.keys(this.colScaleReference).forEach(categoricValue => {
+          this.categoricTooltipTexts[categoricValue] = this.displayName+": "+categoricValue;
+        });
+      }
     }
 
     getColorForValue(value){
@@ -113,7 +120,6 @@ let mostRecentlySelectedCert = null;
 
 let epcRecsFiltersElement = document.getElementById("epc-recs-filters");
 
-
 function isFilterCheckboxCheckedForPaybackType(type){
   switch (type){
     case "SHORT":
@@ -143,7 +149,6 @@ function isFilterCheckboxCheckedForCO2Impact(impact){
       return null;
   }
 }
-
 
 function shouldRecBeHighlighted(rec){
   return getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForCO2Impact(rec.CO2_IMPACT.toUpperCase()) && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase())
@@ -207,15 +212,14 @@ epcRecCategories.forEach(category => {
   epcRecsFiltersElement.appendChild(div);
 });
 
-tryLoadUPRNLookup();
-
 async function tryLoadUPRNLookup(){
-    try {
-        const response = await fetch(UPRNlookupUrl);
+      try {
+        const response = await fetch("./u");
         if (!response.ok) {
           throw new Error(`Response status: ${response.status}`);
         }
-        const csv = parse(await response.text(),{header:true, transform:(a,b)=>{if (b == "latitude" || b == "longitude"){return parseFloat(a)} else {return a}}});
+
+        const csv = parse(await response.text(), {header:true, transform:(a,b)=>{if (b == "latitude" || b == "longitude"){return parseFloat(a)} else {return a}}});
         csv.data.forEach(item => {
             if (item.uprn == ""){
               return;
@@ -285,6 +289,7 @@ async function tryLoadZipFromUrl(url) {
         numFilesProcessed++;
         if (numFilesProcessed == NUM_FILES_FOR_COMPLETE_READ){
             console.log("Zip loaded")
+            
             console.log("Sorting certs by UPRN...")
             certificates.data.sort((a,b) => {
               if (a.UPRN == b.UPRN){  //sort by UPRN and then lodgement date if the UPRNs are the same
@@ -296,6 +301,7 @@ async function tryLoadZipFromUrl(url) {
             });            
             console.log("Sorting recs by LMK key...")
             recommendations.data.sort((a,b) => {return a.LMK_KEY == b.LMK_KEY ? 0 : (a.LMK_KEY < b.LMK_KEY ? -1 : 1)});
+            await tryLoadUPRNLookup();
             geolocateDatapoints();
         }
       });
@@ -335,7 +341,11 @@ async function tryLoadZipFromUrl(url) {
     }).on("click",generateOnClickFunctionForCert(cert)).addTo(map);
 
     if (factorValue != null){
-      circleMarker.bindTooltip(factorToMap.displayName +": "+String(factorValue))
+      if (factorToMap.categoricTooltipTexts != null){
+        circleMarker.bindTooltip(factorToMap.categoricTooltipTexts[String(factorValue)])
+      } else {
+        circleMarker.bindTooltip(factorToMap.displayName +": "+String(factorValue))
+      }     
     }
 
     return circleMarker;

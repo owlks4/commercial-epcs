@@ -1,4 +1,8 @@
 import csv
+from zipfile import ZipFile, ZIP_DEFLATED
+import pyminizip
+import os
+from shutil import copy
 
 rows = []
 
@@ -23,6 +27,16 @@ with open("UPRNlookup_orig.csv", newline='', encoding="utf-8") as csvfile:
         row[0] = modifyUPRN(row[0])
         rows.append(row)
 
-with open('UPRNlookup.csv', 'w', newline='') as csvfile:
+with open('u', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile, delimiter=',', quotechar='"')
     writer.writerows(rows)
+
+path = os.path.realpath(open("u").name)
+greatgrandparent = os.path.dirname(os.path.dirname(os.path.dirname(path)))
+
+copy("u",greatgrandparent+"/u")
+copy("u",greatgrandparent+"/public/u")
+
+print("'u' has been added to both the root directory and the /public/ directory")
+
+os.remove("u")
