@@ -186,8 +186,12 @@ input {
   cursor:pointer;
 }
 
-#veil * :not(a){
+#veil *{
   pointer-events:none;
+}
+
+#veil * a{
+  pointer-events:all;
 }
 
 h1 {

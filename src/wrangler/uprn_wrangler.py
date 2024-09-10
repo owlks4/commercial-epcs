@@ -1,8 +1,7 @@
 import csv
-from zipfile import ZipFile, ZIP_DEFLATED
-import pyminizip
 import os
 from shutil import copy
+import hashlib
 
 rows = []
 
@@ -13,7 +12,7 @@ def modifyUPRN(UPRN):
     for i in range(len(end)):
         end_new.append(str(10-int(end[i])) if int(end[i]) > 0 else end[i])
     scrambled = start + "".join(end_new)
-    return scrambled
+    return hashlib.sha256(scrambled.encode("utf-8")).hexdigest()
 
 with open("UPRNlookup_orig.csv", newline='', encoding="utf-8") as csvfile:
     reader = csv.reader(csvfile, delimiter=',', quotechar='"')
