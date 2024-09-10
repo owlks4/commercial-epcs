@@ -5,15 +5,19 @@ import "leaflet-providers";
 import { ZipReader, BlobReader, TextWriter, TextReader} from '@zip.js/zip.js';
 import { parse } from 'papaparse';
 import {spawnMapControls, mappableFactors} from "./mapControls.js";
-import {makeCircleMarker, setMapRenderVars, certificates, setCertificates} from "./mapDataRender.js";
-import {epcRecCategories, shouldRecBeHighlighted} from "./recFilterManager.js";
+import {makeCircleMarker, setMapRenderVars, certificates, setCertificates, appendToCertificates, rerenderDatapoints} from "./mapDataRender.js";
+import {epcRecCategories} from "./recFilterManager.js";
 
 let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
 var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
 L.tileLayer.provider("Esri.WorldStreetMap").addTo(map);
 spawnMapControls(map);
 
-setMapRenderVars(map,loadStatsIntoPanel);
+setMapRenderVars(map);
+
+let sourceZips = [];
+let numberOfZipsToLoad = 0;
+let numberOfZipsLoaded = 0;
 
 let veil = document.getElementById("veil");
 veil.onclick = (e)=>{
@@ -24,25 +28,34 @@ veil.onclick = (e)=>{
   let input = document.createElement("input");
   input.type = "file";
   input.accept = "application/zip";
+  input.multiple = true;
   
   input.oninput = () => {
-    let file = input.files[0];
-    let reader = new FileReader();
-      
-    reader.readAsDataURL(file);
-      
-    reader.onload = function() {
-      tryLoadZipFromUrl(reader.result);
-    };
-      
-    reader.onerror = function() {
-      console.log(reader.error);
-    };
+    sourceZips = input.files;
+    numberOfZipsLoaded = 0;
+    numberOfZipsToLoad = input.files.length;
+
+    console.log("Received file input... "+input.files.length+" files")
+
+    loadZipFileWithIndex(0);
   };
   input.click();
 };
 
-let recsArea = document.getElementById("recs-area");
+function loadZipFileWithIndex(index){
+  let file = sourceZips[index];
+  let reader = new FileReader();
+
+  reader.onload = async function() {
+    await tryLoadZipFromUrl(reader.result);
+  };
+
+  reader.readAsDataURL(file);
+      
+  reader.onerror = function() {
+    console.log(reader.error);
+  };
+}
 
 let UPRNLookup = {};
 let columns = null;
@@ -111,13 +124,28 @@ async function tryLoadZipFromUrl(url) {
         const textWriter = new TextWriter();
         switch (entry.filename){
             case "certificates.csv":
-                setCertificates(parse(await entry.getData(textWriter), {header:true}));
+                let newCertData = parse(await entry.getData(textWriter), {header:true});
+                if (numberOfZipsLoaded == 0){
+                  setCertificates(newCertData);
+                } else {
+                  appendToCertificates(newCertData);
+                }
             break;
             case "columns.csv":
-                columns = parse(await entry.getData(textWriter), {header:true});
+              let newColData = parse(await entry.getData(textWriter), {header:true});
+              if (numberOfZipsLoaded == 0){
+                columns = newColData;
+              } else {
+                columns.data = columns.data.concat(newColData.data);
+              }
             break;
             case "recommendations.csv":
-                recommendations = parse(await entry.getData(textWriter), {header:true}); //the LMK keys seem to be in order, so you could use binarysearch to get an answer pretty quickly from this
+              let newRecsData = parse(await entry.getData(textWriter), {header:true});  //the LMK keys seem to be in order, so you could use binarysearch to get an answer pretty quickly from this
+              if (numberOfZipsLoaded == 0){
+                recommendations = newRecsData;
+              } else {
+                recommendations.data = recommendations.data.concat(newRecsData.data);
+              }                
             break;
             case "schema.json":
                 schema = JSON.parse(await entry.getData(textWriter));
@@ -127,21 +155,27 @@ async function tryLoadZipFromUrl(url) {
         }
         numFilesProcessed++;
         if (numFilesProcessed == NUM_FILES_FOR_COMPLETE_READ){
-            console.log("Zip loaded")
-            
-            console.log("Sorting certs by UPRN...")
-            certificates.data.sort((a,b) => {
-              if (a.UPRN == b.UPRN){  //sort by UPRN and then lodgement date if the UPRNs are the same
-                let lodgeA = Date.parse(a.LODGEMENT_DATETIME);
-                let lodgeB = Date.parse(b.LODGEMENT_DATETIME);
-                return lodgeA == lodgeB ? 0 : (lodgeA < lodgeB ? -1 : 1);
-              } 
-              return a.UPRN < b.UPRN ? -1 : 1;
-            });            
-            console.log("Sorting recs by LMK key...")
-            recommendations.data.sort((a,b) => {return a.LMK_KEY == b.LMK_KEY ? 0 : (a.LMK_KEY < b.LMK_KEY ? -1 : 1)});
-            await tryLoadUPRNLookup();
-            geolocateDatapoints();
+            numberOfZipsLoaded++;
+            console.log("Loaded "+numberOfZipsLoaded+"/"+numberOfZipsToLoad+" zips...")
+            if (numberOfZipsLoaded == numberOfZipsToLoad){  //if we have completed loading all the zips that the user provided
+                console.log("All zips loaded")
+                console.log("Sorting certs by UPRN...")
+                certificates.data.sort((a,b) => {
+                  if (a.UPRN == b.UPRN){  //sort by UPRN and then lodgement date if the UPRNs are the same
+                    let lodgeA = Date.parse(a.LODGEMENT_DATETIME);
+                    let lodgeB = Date.parse(b.LODGEMENT_DATETIME);
+                    return lodgeA == lodgeB ? 0 : (lodgeA < lodgeB ? -1 : 1);
+                  } 
+                  return a.UPRN < b.UPRN ? -1 : 1;
+                });            
+                console.log("Sorting recs by LMK key...")
+                recommendations.data.sort((a,b) => {return a.LMK_KEY == b.LMK_KEY ? 0 : (a.LMK_KEY < b.LMK_KEY ? -1 : 1)});
+                await tryLoadUPRNLookup();
+                geolocateDatapoints();
+                sourceZips = null;
+            } else if (numberOfZipsLoaded < numberOfZipsToLoad){ //otherwise load the next zip
+              loadZipFileWithIndex(numberOfZipsLoaded);
+            }
         }
       });
       await zipReader.close();
@@ -160,15 +194,15 @@ async function tryLoadZipFromUrl(url) {
 }
 
   function geolocateDatapoints(){ //ONLY to be used the first time
-    let UPRNkeys = Object.keys(UPRNLookup);
-    let certsLength = certificates.data.length;
+        let UPRNkeys = Object.keys(UPRNLookup);
+        let certsLength = certificates.data.length;
 
         let newCertsData = [];
 
         let numCertsSeen = 0;
 
         let numEntriesWithoutUPRN = 0;
-        let rejectedOnOtherGrounds = 0;
+        let failedDueToUPRNNotInDataset = 0;
 
         certificates.data.forEach(async (cert,index) => {
           
@@ -176,13 +210,8 @@ async function tryLoadZipFromUrl(url) {
 
             let failed = false;
 
-            if (cert.UPRN == "" || cert.UPRN == undefined){
-              numEntriesWithoutUPRN++;
-              failed = true;
-            }
-
-            if (!failed && !UPRNkeys.includes(key)){
-              rejectedOnOtherGrounds++;
+            if (cert.UPRN != undefined && cert.UPRN != "" && !UPRNkeys.includes(key)){ //If it does have a UPRN but it's outside the bounds, fail it. (If it doesn't have a UPRN at all, we can't fail or pass it so we keep it and put it in the ungeolocated list.)
+              failedDueToUPRNNotInDataset++;
               failed = true;
             }
 
@@ -196,10 +225,15 @@ async function tryLoadZipFromUrl(url) {
                 } else if (index == parseInt(Math.floor(certsLength / 2))){
                     console.log("50% complete. We won't bother listing 75...")
                 }
-                cert.canPotentiallyExistOnMap = true;
                 newCertsData.push(cert);
-                cert.latLong = UPRNLookup[key];
-                cert.marker = makeCircleMarker(cert,null);
+
+                if (cert.UPRN == "" || cert.UPRN == undefined){
+                  numEntriesWithoutUPRN++;
+                } else {
+                  cert.latLong = UPRNLookup[key];
+                  cert.marker = makeCircleMarker(cert,null);
+                }
+
                 cert.recs = binarySearchByLMKAndReturnAllValidNeighbouringResults(recommendations.data, cert.LMK_KEY);
                 if (cert.recs != null){
                   cert.recs.forEach(rec => {
@@ -227,7 +261,7 @@ async function tryLoadZipFromUrl(url) {
             numCertsSeen++;
 
             if (numCertsSeen == certificates.data.length){
-              console.log("Done. However, "+numEntriesWithoutUPRN+" entries out of "+numCertsSeen+" did not have a UPRN, so will be available to view in the address list below the map instead. "+rejectedOnOtherGrounds+" datapoints were discounted for not being in the viewed area (as intended).");
+              console.log("Done. However, "+numEntriesWithoutUPRN+" entries out of "+ (numCertsSeen - failedDueToUPRNNotInDataset) +" valid entries did not have a UPRN associated with them, so will be only available to view in the address list below the map, and not on the map itself. "+failedDueToUPRNNotInDataset+" superfluous datapoints were discounted for not being in the viewed area (as intended).");
               onGeolocationComplete(newCertsData);
             }
         }); 
@@ -242,6 +276,7 @@ async function tryLoadZipFromUrl(url) {
     mappableFactors.forEach((factor) => {
       factor.radioButton.disabled = false;
     });
+    rerenderDatapoints();
   }
 
   function binarySearchByLMKAndReturnAllValidNeighbouringResults(arr, lmk){
@@ -298,81 +333,3 @@ async function tryLoadZipFromUrl(url) {
       console.log("Couldn't find LMK key in recommendations: "+lmk);
       return null;
   }
-  
-function createHTMLfromRecs(recs){
-
-  let table = document.createElement("table");
-  let thead = document.createElement("thead");
-  thead.innerHTML = "<th>Recommendation</th><th style='padding:0em 0.5em;'>Payback time</th><th style='padding:0em 0.5em;'>CO2 impact</th>";
-  table.appendChild(thead);
-
-  let instanceCountOfPaybackTypes = {}
-
-  recs.forEach(rec => {
-      if (instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] == null){
-        instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] = 1;
-      } else {
-        instanceCountOfPaybackTypes[rec.PAYBACK_TYPE]++;
-      }
-  });
-
-  recs.forEach(rec => {
-    let recCategoryIsHighlighted = shouldRecBeHighlighted(rec);
-    let tr = document.createElement("tr");
-    let recText = rec.RECOMMENDATION;
-    if (recText == "Insert Recommendation here"){
-      recText += " [sic]"
-    }
-    tr.innerHTML = (recCategoryIsHighlighted?"<td style='background-color:#f7f7a1;'>":"<td>")+recText+"</td>";
-    if (instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] != null){
-      tr.innerHTML += "<td style='text-align:center;'; rowspan='"+instanceCountOfPaybackTypes[rec.PAYBACK_TYPE]+"'>"+rec.PAYBACK_TYPE.toUpperCase()+"</td>";
-      instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] = null;
-    }
-    tr.innerHTML += "<td style='text-align:center;'>"+rec.CO2_IMPACT+"</td>";
-    table.appendChild(tr);
-  })
-
-  return table;
-}
-
-function composeAddress(cert){
-  let addr = ""
-
-  if (cert.ADDRESS1 != ""){
-    addr += cert.ADDRESS1+" ";
-  }
-  if (cert.ADDRESS2 != ""){
-    addr += cert.ADDRESS2+" ";
-  }
-  if (cert.ADDRESS3 != ""){
-    addr += cert.ADDRESS3;
-  }
-  return addr;
-}
-
-function loadStatsIntoPanel(cert, isRerender){
-  recsArea.innerHTML = "";
-  let h4 = document.createElement("h4");
-  h4.innerText ="For UPRN "+cert.UPRN;
-  h4.style = "margin-bottom:0;"
-  recsArea.appendChild(h4);
-  let otherH4 = document.createElement("h4");
-  otherH4.innerText = composeAddress(cert);
-  otherH4.style = "margin-bottom:0;"
-  recsArea.appendChild(otherH4);
-  let inspectionDate = document.createElement("h4");
-  inspectionDate.style = "font-size:0.9em;"
-  inspectionDate.innerText = "(Inspected "+cert.INSPECTION_DATE+")";
-  recsArea.appendChild(inspectionDate);
-  if (!isRerender){
-    recsArea.scrollTop = 0;
-  }
-  if (cert.recs == null){
-    let div = document.createElement("div");
-    div.style = "color:black;";
-    div.innerHTML = "Apparently, this datapoint didn't have any EPC recommendations.<br>(Either that, or there was an LMK key match failure)";
-    recsArea.appendChild(div);
-  } else {
-    recsArea.appendChild(createHTMLfromRecs(cert.recs));
-  }
-}

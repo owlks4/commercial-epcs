@@ -1,37 +1,40 @@
-import { mappableFactors } from "./mapControls.js";
+import { mappableFactors, ungeolocatedResultsControl, composeAddress } from "./mapControls.js";
 import {epcRecCategories, shouldRecBeHighlighted, shortPaybackCheckbox,mediumPaybackCheckbox,longPaybackCheckbox,otherPaybackCheckbox} from "./recFilterManager.js";
 
 let map = null;
-let loadStatsIntoPanel = null;
 let certificates = null;
 let mostRecentlySelectedCert = null;
+let recsArea = document.getElementById("recs-area");
 
 function setCertificates(c){
     certificates = c;
 }
 
-function setMapRenderVars(_map, _loadStatsIntoPanel){
+function appendToCertificates(newCerts){
+  certificates.data = certificates.data.concat(newCerts.data);
+}
+
+function setMapRenderVars(_map){
     map = _map;
-    loadStatsIntoPanel = _loadStatsIntoPanel;
 }
 
 function rerenderDatapoints(){
+
+    let ungeolocatedResults = [];
+
+    let factorToMap = null;
+
+    for (let i = 0; i < mappableFactors.length; i++){
+      if (mappableFactors[i].radioButton.checked){
+        factorToMap = mappableFactors[i];
+      }
+    }
+
+    if (factorToMap.internalName == "NONE"){
+      factorToMap = null;
+    }
+
     certificates.data.forEach((cert,index) => {
-      if (cert.canPotentiallyExistOnMap == null){
-        return;
-      }
-
-      let factorToMap = null;
-
-      for (let i = 0; i < mappableFactors.length; i++){
-        if (mappableFactors[i].radioButton.checked){
-          factorToMap = mappableFactors[i];
-        }
-      }
-
-      if (factorToMap.internalName == "NONE"){
-        factorToMap = null;
-      }
 
       //check if the datapoint is eligible for being shown right now, based on the filters that the user has checked:
 
@@ -83,25 +86,32 @@ function rerenderDatapoints(){
 
       let isTrulyValid = false;
 
-      cert.recs.forEach(rec => {
-          if (shouldRecBeHighlighted(rec)){
-            isTrulyValid = true;
-          }
-      });
+      for (let i = 0; i < cert.recs.length; i++){ //if ANY REC in the cert is active under the current filter criteria
+        if (shouldRecBeHighlighted(cert.recs[i])){
+          isTrulyValid = true;
+          break;
+        }
+      }
 
       if (cert.marker != null){ //delete the old one to ensure that it gets its new colour if required, when it's recreated immediately afterwards
         map.removeLayer(cert.marker);
         cert.marker = null;
       }
       
-      if (isTrulyValid){
-        cert.marker = makeCircleMarker(cert, factorToMap).addTo(map);  
+      if (isTrulyValid){ //if the item still passes all the criteria
+        if (cert.latLong == null){ //then we can't actually put it on the map so add it to the unmappable addresses list
+          ungeolocatedResults.push(cert);
+        } else {
+          cert.marker = makeCircleMarker(cert, factorToMap).addTo(map);  //then we succeed in our preferred option of mapping the item
+        }        
       }
     });
 
     if (mostRecentlySelectedCert != null){
       loadStatsIntoPanel(mostRecentlySelectedCert, true);
     }
+
+    ungeolocatedResultsControl.update(ungeolocatedResults, factorToMap);
   }
 
   function makeCircleMarker(cert, factorToMap){
@@ -137,10 +147,76 @@ function rerenderDatapoints(){
 
   function generateOnClickFunctionForCert(cert){
     return ()=>{
-      mostRecentlySelectedCert = cert;
       loadStatsIntoPanel(cert, false);
       map.flyTo(cert.latLong, 18);
     }
 }
 
-  export {rerenderDatapoints,setMapRenderVars,certificates,setCertificates,makeCircleMarker}
+function loadStatsIntoPanel(cert, isRerender){
+  mostRecentlySelectedCert = cert;
+  recsArea.innerHTML = "";
+  if (cert.UPRN != "" && cert.UPRN != null){
+    let h4 = document.createElement("h4");
+    h4.innerText ="For UPRN "+cert.UPRN;
+    h4.style = "margin-bottom:0;"
+    recsArea.appendChild(h4);
+  }
+  let otherH4 = document.createElement("h4");
+  otherH4.innerText = composeAddress(cert);
+  otherH4.style = "margin-bottom:0;"
+  recsArea.appendChild(otherH4);
+  let inspectionDate = document.createElement("h4");
+  inspectionDate.style = "font-size:0.9em;"
+  inspectionDate.innerText = "(Inspected "+cert.INSPECTION_DATE+")";
+  recsArea.appendChild(inspectionDate);
+  if (!isRerender){
+    recsArea.scrollTop = 0;
+  }
+  if (cert.recs == null){
+    let div = document.createElement("div");
+    div.style = "color:black;";
+    div.innerHTML = "Apparently, this datapoint didn't have any EPC recommendations.<br>(Either that, or there was an LMK key match failure)";
+    recsArea.appendChild(div);
+  } else {
+    recsArea.appendChild(createHTMLfromRecs(cert.recs));
+  }
+}
+
+
+function createHTMLfromRecs(recs){
+
+  let table = document.createElement("table");
+  let thead = document.createElement("thead");
+  thead.innerHTML = "<th>Recommendation</th><th style='padding:0em 0.5em;'>Payback time</th><th style='padding:0em 0.5em;'>CO2 impact</th>";
+  table.appendChild(thead);
+
+  let instanceCountOfPaybackTypes = {}
+
+  recs.forEach(rec => {
+      if (instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] == null){
+        instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] = 1;
+      } else {
+        instanceCountOfPaybackTypes[rec.PAYBACK_TYPE]++;
+      }
+  });
+
+  recs.forEach(rec => {
+    let recCategoryIsHighlighted = shouldRecBeHighlighted(rec);
+    let tr = document.createElement("tr");
+    let recText = rec.RECOMMENDATION;
+    if (recText == "Insert Recommendation here"){
+      recText += " [sic]"
+    }
+    tr.innerHTML = (recCategoryIsHighlighted?"<td style='background-color:#f7f7a1;'>":"<td>")+recText+"</td>";
+    if (instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] != null){
+      tr.innerHTML += "<td style='text-align:center;'; rowspan='"+instanceCountOfPaybackTypes[rec.PAYBACK_TYPE]+"'>"+rec.PAYBACK_TYPE.toUpperCase()+"</td>";
+      instanceCountOfPaybackTypes[rec.PAYBACK_TYPE] = null;
+    }
+    tr.innerHTML += "<td style='text-align:center;'>"+rec.CO2_IMPACT+"</td>";
+    table.appendChild(tr);
+  })
+
+  return table;
+}
+
+export {rerenderDatapoints,setMapRenderVars,certificates,setCertificates,appendToCertificates,makeCircleMarker,loadStatsIntoPanel}
