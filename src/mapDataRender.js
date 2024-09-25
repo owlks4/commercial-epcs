@@ -1,6 +1,24 @@
 import { mappableFactors, ungeolocatedResultsControl, composeAddress } from "./mapControls.js";
 import {epcRecCategories, shouldRecBeHighlighted, shortPaybackCheckbox,mediumPaybackCheckbox,longPaybackCheckbox,otherPaybackCheckbox} from "./recFilterManager.js";
 
+let USE_MAP_FOR_RENDER = false; //whether we should use the map as the rendering output (otherwise we default to the list)
+
+function setMapInUse(b){
+  USE_MAP_FOR_RENDER = b;
+
+  if (USE_MAP_FOR_RENDER){
+    document.getElementById("map-parent").style = "";
+    document.getElementById("list").style = "display:none;";
+    map.invalidateSize();
+  } else {
+    document.getElementById("map-parent").style = "display:none;";
+    document.getElementById("list").style = "";
+    map.invalidateSize();
+  }
+
+  rerenderDatapoints();  
+}
+
 let map = null;
 let certificates = null;
 let mostRecentlySelectedCert = null;
@@ -99,10 +117,10 @@ function rerenderDatapoints(){
       }
       
       if (isTrulyValid){ //if the item still passes all the criteria
-        if (cert.latLong == null){ //then we can't actually put it on the map so add it to the unmappable addresses list
+        if (cert.latLong == null || !USE_MAP_FOR_RENDER){ //then we can't actually put it on the map so add it to the unmappable addresses list
           ungeolocatedResults.push(cert);
         } else {
-          cert.marker = makeCircleMarker(cert, factorToMap).addTo(map);  //then we succeed in our preferred option of mapping the item
+          cert.marker = makeCircleMarker(cert, factorToMap).addTo(map);  //then we succeed in our preferred option of mapping the item        
         }        
       }
     });
@@ -111,7 +129,14 @@ function rerenderDatapoints(){
       loadStatsIntoPanel(mostRecentlySelectedCert, true);
     }
 
-    ungeolocatedResultsControl.update(ungeolocatedResults, factorToMap);
+    if (USE_MAP_FOR_RENDER){ //if the map is in use, any ungeolocated addresses are sent to the control on the map
+      ungeolocatedResultsControl.update(ungeolocatedResults, factorToMap);
+    } else { //otherwise, the ungeolocated addresses (i.e. all of them, because we have no map) are sent to the list
+      document.getElementById("list-content").innerHTML = "";
+      let list = getAsHTMLList(ungeolocatedResults, factorToMap, 1000);
+      list.className = "html-list-hero";
+      document.getElementById("list-content").appendChild(list);
+    }    
   }
 
   function makeCircleMarker(cert, factorToMap){
@@ -219,4 +244,39 @@ function createHTMLfromRecs(recs){
   return table;
 }
 
-export {rerenderDatapoints,setMapRenderVars,certificates,setCertificates,appendToCertificates,makeCircleMarker,loadStatsIntoPanel}
+function getAsHTMLList(ungeolocatedResults, factorToMap, displayLimit){ //this is the non-map version. If there IS a map in use, then ungeolocated results will have been sent to the list view
+  let list = document.createElement("ul");
+
+  if (ungeolocatedResults.length > displayLimit){
+    list.innerHTML = "<strong>"+ungeolocatedResults.length +" results could not be geolocated (apply some filters first to see them in this list)</strong>";
+  } else {
+    list.innerHTML = "";
+    list.scrollTop = 0;        
+    if (factorToMap == null){
+      ungeolocatedResults.sort((a,b)=>{return a.ADDRESS.localeCompare(b.ADDRESS)}); //sort alphabetically if there are no factor values involved
+    } else {
+      ungeolocatedResults.sort((a,b)=>{  //but if there are, sort by factor value
+        let aVal = a[factorToMap.internalName];
+        let bVal = b[factorToMap.internalName];    
+        return aVal == bVal ? 0 : (aVal < bVal ? -1 : 1);
+      });
+    }
+    ungeolocatedResults.forEach((cert) => {
+      let li = document.createElement("li");
+      li.className = "ungeolocatable-list-item"
+      li.innerText = composeAddress(cert);
+      if (factorToMap != null){
+        let factorValue = cert[factorToMap.internalName];
+        li.style = "background-color:"+factorToMap.getColorForValue(factorValue);
+        li.title = factorToMap.displayName +": "+String(factorValue);
+      }
+      li.onclick = () => {loadStatsIntoPanel(cert,false);}
+      list.appendChild(li);
+    });
+  }
+
+  list.style = "color:black; overflow:hidden auto; margin:0;max-height:50vh;";
+  return list;
+}
+
+export {rerenderDatapoints,setMapRenderVars,certificates,setCertificates,appendToCertificates,makeCircleMarker,loadStatsIntoPanel,getAsHTMLList,setMapInUse,USE_MAP_FOR_RENDER}

@@ -217,3 +217,28 @@ h1 {
 .ungeolocatable-list-item:hover {
   border: 1px solid black;
 }
+
+#list {
+  display:flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width:55vw;
+  height: 95vh;
+  font-size:1.2em;
+}
+
+#list-content{
+  color:black;
+  min-height:60%;
+  max-height:60%;
+  width:60%;
+  justify-content: center;
+  display:flex;
+}
+
+.html-list-hero {
+  text-align:left;
+  width:100%;
+  background-color:rgb(230, 230, 230);
+}

@@ -15,7 +15,28 @@
     </header>
     <main>
       <div class="flex">
-        <div id="map"></div>
+        <div id="map-parent" style="display:none;">
+          <div id="map"></div>
+        </div>
+        <div id="list">
+          <div>
+            <h4 style="color:lightgrey;">What is this?</h4>
+            This is a potentially huge list of the EPCs described in the dataset you uploaded.
+            <br>
+            To bring it down to a manageable size, choose some filters using the checkboxes on the right.
+            <br>
+            Then click on any entry to see its recommendations.
+            <br><br>
+            <h4 style="color:lightgrey;">Can I view it on a map instead?</h4>
+            YES - if you have one of AddressBase's UPRN to latlong geopackages, <a>click here to apply it</a>.
+            <br>
+            It will let you view this list as a map, which is much more intuitive.
+            <br><br><br>
+          </div>
+          <div id="list-content">
+            Loading...
+          </div>
+        </div>
         <div id="bar">
           <div style="height:fit-content;display:flex;">
             <div style="width:100%;">

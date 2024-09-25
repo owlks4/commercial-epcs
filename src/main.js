@@ -5,7 +5,7 @@ import "leaflet-providers";
 import { ZipReader, BlobReader, TextWriter, TextReader} from '@zip.js/zip.js';
 import { parse } from 'papaparse';
 import {spawnMapControls, mappableFactors} from "./mapControls.js";
-import {makeCircleMarker, setMapRenderVars, certificates, setCertificates, appendToCertificates, rerenderDatapoints} from "./mapDataRender.js";
+import {setMapInUse, USE_MAP_FOR_RENDER, makeCircleMarker, setMapRenderVars, certificates, setCertificates, appendToCertificates, rerenderDatapoints} from "./mapDataRender.js";
 import {epcRecCategories} from "./recFilterManager.js";
 
 let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
@@ -170,6 +170,7 @@ async function tryLoadZipFromUrl(url) {
                 });            
                 console.log("Sorting recs by LMK key...")
                 recommendations.data.sort((a,b) => {return a.LMK_KEY == b.LMK_KEY ? 0 : (a.LMK_KEY < b.LMK_KEY ? -1 : 1)});
+                setMapInUse(USE_MAP_FOR_RENDER);
                 await tryLoadUPRNLookup();
                 geolocateDatapoints();
                 sourceZips = null;

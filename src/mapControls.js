@@ -1,4 +1,4 @@
-import { rerenderDatapoints, loadStatsIntoPanel } from "./mapDataRender.js";
+import { rerenderDatapoints, getAsHTMLList } from "./mapDataRender.js";
 
 class MappableFactor {
     constructor(displayName, internalName, colScaleReference){
@@ -186,14 +186,14 @@ let UngeolocatedResultsControl = L.Control.extend({
       title.style = "white-space:nowrap;"
       title.innerHTML = "<strong>Additional filter results that could not be geolocated:</strong>";
       div.appendChild(title);
-      let listParent = document.createElement("div");
-      listParent.className = "control-panel-white";
-      listParent.style="max-width:unset;padding-top:0.25em;padding-bottom:0.75em;"
+      this.listParent = document.createElement("div");
+      this.listParent.className = "control-panel-white";
+      this.listParent.style="max-width:unset;padding-top:0.25em;padding-bottom:0.75em;"
       this.list = document.createElement("ul");
       this.list.id = "ungeolocated-results-list";
-      listParent.appendChild(this.list);
+      this.listParent.appendChild(this.list);
       megaDiv.appendChild(div);
-      megaDiv.appendChild(listParent);
+      megaDiv.appendChild(this.listParent);
       this._div = megaDiv;
       L.DomEvent.disableClickPropagation(this._div);
       L.DomEvent.disableScrollPropagation(this._div);
@@ -201,33 +201,10 @@ let UngeolocatedResultsControl = L.Control.extend({
     },
 
     update(ungeolocatedResults, factorToMap){
-      if (ungeolocatedResults.length > 100){
-        this.list.innerText = ungeolocatedResults.length +" results could not be geolocated (apply some filters first to see them in this list)";
-      } else {
-        this.list.innerHTML = "";
-        this.list.scrollTop = 0;        
-        if (factorToMap == null){
-          ungeolocatedResults.sort((a,b)=>{return a.ADDRESS.localeCompare(b.ADDRESS)}); //sort alphabetically if there are no factor values involved
-        } else {
-          ungeolocatedResults.sort((a,b)=>{  //but if there are, sort by factor value
-            let aVal = a[factorToMap.internalName];
-            let bVal = b[factorToMap.internalName];    
-            return aVal == bVal ? 0 : (aVal < bVal ? -1 : 1);
-          });
-        }
-        ungeolocatedResults.forEach((cert) => {
-          let li = document.createElement("li");
-          li.className = "ungeolocatable-list-item"
-          li.innerText = composeAddress(cert);
-          if (factorToMap != null){
-            let factorValue = cert[factorToMap.internalName];
-            li.style = "background-color:"+factorToMap.getColorForValue(factorValue);
-            li.title = factorToMap.displayName +": "+String(factorValue);
-          }
-          li.onclick = () => {loadStatsIntoPanel(cert,false);}
-          this.list.appendChild(li);
-        });
-      }
+      this.list.remove();
+      this.list = getAsHTMLList(ungeolocatedResults, factorToMap, 100)
+      this.list.id = "ungeolocated-results-list";
+      this.listParent.appendChild(this.list);
     }
 });
 
