@@ -49,29 +49,50 @@ function loadZipFileWithIndex(index){
   reader.onload = async function() {
     await tryLoadZipFromUrl(reader.result);
   };
-
-  reader.readAsDataURL(file);
-      
   reader.onerror = function() {
     console.log(reader.error);
   };
+
+  reader.readAsDataURL(file);
 }
 
-let UPRNLookup = {};
+let UPRNLookup = null;
 let columns = null;
 let recommendations = null;
 let schema = null;
 
 const paybackTypes = {"short":0, "SHORT":0, "medium":1, "MEDIUM":1, "long":2, "LONG":2, "other":3, "OTHER":3};
 
-async function tryLoadUPRNLookup(){
+document.getElementById("load-location-csv-anchor-tag").onclick = ()=>{
+
+  let fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.setAttribute("accept",".csv");
+
+  fileInput.oninput = ()=>{
+    let reader = new FileReader();
+
+    reader.onload = async function() {
+      await tryLoadUPRNLookup(reader.result);
+    };
+    reader.onerror = function() {
+      console.log(reader.error);
+    };
+  
+    reader.readAsDataURL(fileInput.files[0]);
+  };
+
+  fileInput.click();
+};
+
+async function tryLoadUPRNLookup(fileUrl){
       try {
-        const response = await fetch("./u");
+        const response = await fetch(fileUrl);
         if (!response.ok) {
           throw new Error(`Response status: ${response.status}`);
         }
-
         const csv = parse(await response.text(), {header:true, transform:(a,b)=>{if (b == "latitude" || b == "longitude"){return parseFloat(a)} else {return a}}});
+        UPRNLookup = {};
         csv.data.forEach(item => {
             if (item.uprn == ""){
               return;
@@ -83,27 +104,12 @@ async function tryLoadUPRNLookup(){
               return;
             }            
             UPRNLookup[item.uprn] = [item.latitude, item.longitude];
-        })     
+        });
+        setMapInUse(true);
+        geolocateDatapoints();
       } catch (error) {
         console.error(error.message);
       }
-}
-
-function scrOrDescr(UPRN){
-  if (UPRN == null){
-    return null;
-  }
-  UPRN = UPRN.trim();
-  let newUPRN = new Array(12);
-  for (let i = 0; i < UPRN.length; i++){
-    let c = UPRN[i];
-    if (i < 6){
-      newUPRN[i] = c;
-    } else {
-      newUPRN[i] = c != "0" ? String(10 - parseInt(c)) : c;
-    }
-  }
-  return newUPRN.join("")
 }
 
 async function tryLoadZipFromUrl(url) {
@@ -171,7 +177,6 @@ async function tryLoadZipFromUrl(url) {
                 console.log("Sorting recs by LMK key...")
                 recommendations.data.sort((a,b) => {return a.LMK_KEY == b.LMK_KEY ? 0 : (a.LMK_KEY < b.LMK_KEY ? -1 : 1)});
                 setMapInUse(USE_MAP_FOR_RENDER);
-                await tryLoadUPRNLookup();
                 geolocateDatapoints();
                 sourceZips = null;
             } else if (numberOfZipsLoaded < numberOfZipsToLoad){ //otherwise load the next zip
@@ -195,7 +200,7 @@ async function tryLoadZipFromUrl(url) {
 }
 
   function geolocateDatapoints(){ //ONLY to be used the first time
-        let UPRNkeys = Object.keys(UPRNLookup);
+        let UPRNkeys = UPRNLookup == null ? null : Object.keys(UPRNLookup);
         let certsLength = certificates.data.length;
 
         let newCertsData = [];
@@ -207,15 +212,17 @@ async function tryLoadZipFromUrl(url) {
 
         certificates.data.forEach(async (cert,index) => {
           
-            let key = await sha256(scrOrDescr(cert.UPRN))
+            let key = cert.UPRN;
 
             let failed = false;
 
-            if (cert.UPRN != undefined && cert.UPRN != "" && !UPRNkeys.includes(key)){ //If it does have a UPRN but it's outside the bounds, fail it. (If it doesn't have a UPRN at all, we can't fail or pass it so we keep it and put it in the ungeolocated list.)
-              failedDueToUPRNNotInDataset++;
-              failed = true;
+            if (UPRNLookup != null){ //if we have the UPRN lookup loaded and can therefore judge UPRN validity, we check for UPRN fail conditions:
+              if (cert.UPRN != undefined && cert.UPRN != "" && !UPRNkeys.includes(key)){ //If it does have a UPRN but it's outside the bounds, fail it. (If it doesn't have a UPRN at all, we can't fail or pass it so we keep it and put it in the ungeolocated list.)
+                failedDueToUPRNNotInDataset++;
+                failed = true;
+              }  
             }
-
+            
             if (!failed && index < certificates.data.length - 1 && certificates.data[index+1].UPRN == cert.UPRN && Date.parse(certificates.data[index+1].LODGEMENT_DATETIME) > Date.parse(cert.LODGEMENT_DATETIME)){
               failed = true; //and so in this case, we don't process this datapoint, because the one after it in the list is for the same building but more recent
             }
@@ -228,7 +235,7 @@ async function tryLoadZipFromUrl(url) {
                 }
                 newCertsData.push(cert);
 
-                if (cert.UPRN == "" || cert.UPRN == undefined){
+                if (UPRNLookup == null || cert.UPRN == "" || cert.UPRN == undefined){
                   numEntriesWithoutUPRN++;
                 } else {
                   cert.latLong = UPRNLookup[key];
@@ -263,7 +270,10 @@ async function tryLoadZipFromUrl(url) {
 
             if (numCertsSeen == certificates.data.length){
               console.log("Done. However, "+numEntriesWithoutUPRN+" entries out of "+ (numCertsSeen - failedDueToUPRNNotInDataset) +" valid entries did not have a UPRN associated with them, so will be only available to view in the address list below the map, and not on the map itself. "+failedDueToUPRNNotInDataset+" superfluous datapoints were discounted for not being in the viewed area (as intended).");
-              onGeolocationComplete(newCertsData);
+              if (UPRNLookup != null){
+                onGeolocationComplete(newCertsData);
+              }
+              rerenderDatapoints();
             }
         }); 
   }
@@ -277,7 +287,6 @@ async function tryLoadZipFromUrl(url) {
     mappableFactors.forEach((factor) => {
       factor.radioButton.disabled = false;
     });
-    rerenderDatapoints();
   }
 
   function binarySearchByLMKAndReturnAllValidNeighbouringResults(arr, lmk){

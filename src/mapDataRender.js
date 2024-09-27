@@ -133,7 +133,7 @@ function rerenderDatapoints(){
       ungeolocatedResultsControl.update(ungeolocatedResults, factorToMap);
     } else { //otherwise, the ungeolocated addresses (i.e. all of them, because we have no map) are sent to the list
       document.getElementById("list-content").innerHTML = "";
-      let list = getAsHTMLList(ungeolocatedResults, factorToMap, 1000);
+      let list = getAsHTMLList(ungeolocatedResults, factorToMap, 2000);
       list.className = "html-list-hero";
       document.getElementById("list-content").appendChild(list);
     }    
@@ -245,10 +245,17 @@ function createHTMLfromRecs(recs){
 }
 
 function getAsHTMLList(ungeolocatedResults, factorToMap, displayLimit){ //this is the non-map version. If there IS a map in use, then ungeolocated results will have been sent to the list view
+  if (ungeolocatedResults.length == 0){
+    let div = document.createElement("div");
+    div.style = "padding-left:10px;"
+    div.innerText = "Either loading (in which case please wait a few seconds) OR no valid results - if the latter, please expand your filter requirements."
+    return div;
+  }
+
   let list = document.createElement("ul");
 
   if (ungeolocatedResults.length > displayLimit){
-    list.innerHTML = "<strong>"+ungeolocatedResults.length +" results could not be geolocated (apply some filters first to see them in this list)</strong>";
+    list.innerHTML = "<strong>"+ungeolocatedResults.length +" results (which is above our display limit of "+displayLimit+", so apply some filters first to see them in this list)</strong>";
   } else {
     list.innerHTML = "";
     list.scrollTop = 0;        
