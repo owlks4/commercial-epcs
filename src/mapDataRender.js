@@ -10,6 +10,7 @@ function setMapInUse(b){
     document.getElementById("map-parent").style = "";
     document.getElementById("list").style = "display:none;";
     map.invalidateSize();
+    document.getElementById("list-content").innerHTML = "";
   } else {
     document.getElementById("map-parent").style = "display:none;";
     document.getElementById("list").style = "";
@@ -255,7 +256,7 @@ function getAsHTMLList(ungeolocatedResults, factorToMap, displayLimit){ //this i
   let list = document.createElement("ul");
 
   if (ungeolocatedResults.length > displayLimit){
-    list.innerHTML = "<strong>"+ungeolocatedResults.length +" results (which is above our display limit of "+displayLimit+", so apply some filters first to see them in this list)</strong>";
+    list.innerHTML = "<strong>"+ungeolocatedResults.length +" results (which is above our display limit of "+displayLimit+",<br>so apply some filters first to see them in this list)</strong>";
   } else {
     list.innerHTML = "";
     list.scrollTop = 0;        

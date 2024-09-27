@@ -2,7 +2,7 @@ import './style.css'
 import 'leaflet'
 import "leaflet/dist/leaflet.css"
 import "leaflet-providers";
-import { ZipReader, BlobReader, TextWriter, TextReader} from '@zip.js/zip.js';
+import { ZipReader, BlobReader, TextWriter } from '@zip.js/zip.js';
 import { parse } from 'papaparse';
 import {spawnMapControls, mappableFactors} from "./mapControls.js";
 import {setMapInUse, USE_MAP_FOR_RENDER, makeCircleMarker, setMapRenderVars, certificates, setCertificates, appendToCertificates, rerenderDatapoints} from "./mapDataRender.js";
@@ -287,6 +287,7 @@ async function tryLoadZipFromUrl(url) {
     mappableFactors.forEach((factor) => {
       factor.radioButton.disabled = false;
     });
+    map.setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
   }
 
   function binarySearchByLMKAndReturnAllValidNeighbouringResults(arr, lmk){

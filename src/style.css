@@ -202,7 +202,7 @@ h1 {
 }
 
 #ungeolocated-results-list {
-  max-height:10em;
+  max-height:15em !important;
   overflow: hidden auto;
   margin:0;
 }
@@ -243,10 +243,10 @@ h1 {
   background-color:rgb(230, 230, 230);
 }
 
-#load-gpkg-anchor-tag:link {
+#load-location-csv-anchor-tag:link {
   color:aqua;
 }
 
-#load-gpkg-anchor-tag:visited {
+#load-location-csv-anchor-tag:visited {
   color:magenta;
 }
