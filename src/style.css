@@ -235,6 +235,7 @@ h1 {
   width:60%;
   justify-content: center;
   display:flex;
+  margin-top:0.5em;
 }
 
 .html-list-hero {
@@ -258,4 +259,5 @@ h1 {
 #list-view-filters {
   display:flex;
   justify-content: space-between;
+  flex-wrap: wrap;
 }

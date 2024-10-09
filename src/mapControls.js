@@ -219,14 +219,34 @@ let UngeolocatedResultsControl = L.Control.extend({
 let factorSelectControl = new FactorSelectControl();
 let ungeolocatedResultsControl = new UngeolocatedResultsControl();
 
+function populateListViewLegendCheckboxes(div, factor){
+  div.innerHTML = "";
+  let legendTitle = document.createElement("div");
+  legendTitle.style="padding-top:0.5em;width:100%;"
+  legendTitle.innerHTML = "<strong>Legend</strong><br>"
+  div.appendChild(legendTitle);
+  let checkboxesArea = document.createElement("div");
+  checkboxesArea.style = "display:flex;justify-content:space-between;width:100%;overflow:hidden auto;flex-wrap:wrap;max-height:7em;"
+  Object.keys(factor.colScaleReference).forEach((key)=>{
+    checkboxesArea.appendChild(makeLegendCheckbox(key, factor.colScaleReference[key], factor));
+  });
+  div.appendChild(checkboxesArea);
+  div.appendChild(document.createElement("br"));
+}
+
+function clearListViewLegendCheckboxes(div){
+  div.innerHTML = "";
+}
+
 function spawnMapControls(map){
     factorSelectControl.addTo(map);
     ungeolocatedResultsControl.addTo(map);
     if (!USE_MAP_FOR_RENDER){
       let lvf = document.getElementById("list-view-filters");
+      let legend = document.getElementById("list-view-filters-legend");
       mappableFactors.forEach((factor,index) => {
         console.log("The 'openAccordion' and 'closeAccordion' in the following line actually need to be replaced with equivalent functions that pipe the required data into the list view filter legend section, not the factorselectcontrol from map view")
-        factor.generateRadioButtonAndAddToThisDiv(lvf, index == 0, openAccordion, closeAccordion, this);   
+        factor.generateRadioButtonAndAddToThisDiv(lvf, index == 0, populateListViewLegendCheckboxes, clearListViewLegendCheckboxes, legend);   
         factor.radioButton.disabled = false;
       });
     }
