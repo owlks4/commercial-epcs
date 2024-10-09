@@ -1,4 +1,4 @@
-import { rerenderDatapoints, getAsHTMLList } from "./mapDataRender.js";
+import { rerenderDatapoints, getAsHTMLList, USE_MAP_FOR_RENDER } from "./mapDataRender.js";
 
 class MappableFactor {
     constructor(displayName, internalName, colScaleReference){
@@ -14,6 +14,36 @@ class MappableFactor {
           this.categoricTooltipTexts[categoricValue] = this.displayName+": "+categoricValue;
         });
       }
+    }
+
+    generateRadioButtonAndAddToThisDiv(div, isFirstInList, onActivate, onDeactivate, activateDeactivateParameter){
+      if (this.radioButton != null){
+        this.radioButton.parentElement.remove();
+      }
+      this.radioButton = document.createElement("input");
+      this.radioButton.type = "radio";        
+      this.radioButton.id = this.internalName;
+      this.radioButton.setAttribute("name","mappableFactorsRadioButtons")
+      this.radioButton.disabled = true;
+      if (isFirstInList){
+        this.radioButton.checked = true;
+      }
+      this.radioButton.oninput = (e)=>{
+          if (this.internalName == "NONE"){
+            onDeactivate(activateDeactivateParameter);
+          }
+          else if (e.target.checked){
+            onActivate(activateDeactivateParameter, this);
+          }
+          rerenderDatapoints();
+      }
+      let label = document.createElement("label");
+      label.innerText = this.displayName;
+      label.setAttribute("for",this.radioButton.id);
+      let radButtonParentDiv = document.createElement("div");
+      radButtonParentDiv.appendChild(this.radioButton);
+      radButtonParentDiv.appendChild(label);
+      div.appendChild(radButtonParentDiv);
     }
 
     getColorForValue(value){
@@ -75,6 +105,24 @@ function composeAddress(cert){
   return addr.trim();
 }
 
+function openAccordion(factorSelectControl, factor){ //I haven't put this and its counterpart under FactorSelectControl itself because these functions get passed around as variables in the onAdd function of that class, and I wanted to make sure they were definitely available
+  factorSelectControl.accordion.innerHTML = "";
+  let legendTitle = document.createElement("span");
+  legendTitle.innerHTML = "<strong>Legend</strong><br>"
+  factorSelectControl.accordion.appendChild(legendTitle);
+
+  Object.keys(factor.colScaleReference).forEach((key)=>{
+    factorSelectControl.accordion.appendChild(makeLegendCheckbox(key, factor.colScaleReference[key], factor));
+  });
+
+  factorSelectControl.accordion.style = "max-height:fit-content;";
+}
+
+function closeAccordion(factorSelectControl){
+  factorSelectControl.accordion.innerHTML = "";
+  factorSelectControl.accordion.style = "";
+}
+
 let FactorSelectControl = L.Control.extend({ 
     _container: null,
     options: {position: 'topright', },
@@ -88,29 +136,7 @@ let FactorSelectControl = L.Control.extend({
       div.appendChild(title);
 
       mappableFactors.forEach((factor,index) => {
-        factor.radioButton = document.createElement("input");
-        factor.radioButton.type = "radio";        
-        factor.radioButton.id = factor.internalName;
-        factor.radioButton.setAttribute("name","mappableFactorsRadioButtons")
-        factor.radioButton.disabled = true;
-        if (index == 0){
-          factor.radioButton.checked = true;
-        }
-        factor.radioButton.oninput = (e)=>{
-            if (factor.internalName == "NONE"){
-              this.closeAccordion();
-            }
-            else if (e.target.checked){
-              this.openAccordion(factor);
-            }
-            rerenderDatapoints();
-        }
-        let label = document.createElement("label");
-        label.innerText = factor.displayName;
-        label.setAttribute("for",factor.radioButton.id);
-        div.appendChild(factor.radioButton);
-        div.appendChild(label);
-        div.appendChild(document.createElement("br"));      
+        factor.generateRadioButtonAndAddToThisDiv(div, index == 0, openAccordion, closeAccordion, this);   
       });
 
       this.accordion = document.createElement("div");
@@ -121,24 +147,6 @@ let FactorSelectControl = L.Control.extend({
       this._div = megaDiv;
       L.DomEvent.disableClickPropagation(this._div);
       return this._div;
-    },
-
-    openAccordion(factor){
-      this.accordion.innerHTML = "";
-      let legendTitle = document.createElement("span");
-      legendTitle.innerHTML = "<strong>Legend</strong><br>"
-      this.accordion.appendChild(legendTitle);
-
-      Object.keys(factor.colScaleReference).forEach((key)=>{
-        this.accordion.appendChild(makeLegendCheckbox(key, factor.colScaleReference[key], factor));
-      });
-
-      this.accordion.style = "max-height:fit-content;";
-    },
-
-    closeAccordion(){
-      this.accordion.innerHTML = "";
-      this.accordion.style = "";
     }
 });
 
@@ -214,6 +222,14 @@ let ungeolocatedResultsControl = new UngeolocatedResultsControl();
 function spawnMapControls(map){
     factorSelectControl.addTo(map);
     ungeolocatedResultsControl.addTo(map);
+    if (!USE_MAP_FOR_RENDER){
+      let lvf = document.getElementById("list-view-filters");
+      mappableFactors.forEach((factor,index) => {
+        console.log("The 'openAccordion' and 'closeAccordion' in the following line actually need to be replaced with equivalent functions that pipe the required data into the list view filter legend section, not the factorselectcontrol from map view")
+        factor.generateRadioButtonAndAddToThisDiv(lvf, index == 0, openAccordion, closeAccordion, this);   
+        factor.radioButton.disabled = false;
+      });
+    }
 }
 
 export {spawnMapControls, ungeolocatedResultsControl, mappableFactors, composeAddress}

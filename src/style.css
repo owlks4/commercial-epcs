@@ -250,3 +250,12 @@ h1 {
 #load-location-csv-anchor-tag:visited {
   color:magenta;
 }
+
+#certificate-filters-section-list-view {
+  width:50%;
+}
+
+#list-view-filters {
+  display:flex;
+  justify-content: space-between;
+}

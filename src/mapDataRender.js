@@ -16,7 +16,6 @@ function setMapInUse(b){
     document.getElementById("list").style = "";
     map.invalidateSize();
   }
-
   rerenderDatapoints();  
 }
 
@@ -134,7 +133,7 @@ function rerenderDatapoints(){
       ungeolocatedResultsControl.update(ungeolocatedResults, factorToMap);
     } else { //otherwise, the ungeolocated addresses (i.e. all of them, because we have no map) are sent to the list
       document.getElementById("list-content").innerHTML = "";
-      let list = getAsHTMLList(ungeolocatedResults, factorToMap, 2000);
+      let list = getAsHTMLList(ungeolocatedResults, factorToMap, 2500);
       list.className = "html-list-hero";
       document.getElementById("list-content").appendChild(list);
     }    
@@ -256,7 +255,7 @@ function getAsHTMLList(ungeolocatedResults, factorToMap, displayLimit){ //this i
   let list = document.createElement("ul");
 
   if (ungeolocatedResults.length > displayLimit){
-    list.innerHTML = "<strong>"+ungeolocatedResults.length +" results (which is above our display limit of "+displayLimit+",<br>so apply some filters first to see them in this list)</strong>";
+    list.innerHTML = "<strong><br>"+ungeolocatedResults.length +" results (which is above our display limit of "+displayLimit+",<br>so apply some filters first to see them in this list)</strong>";
   } else {
     list.innerHTML = "";
     list.scrollTop = 0;        
