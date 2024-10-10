@@ -19,24 +19,25 @@
           <div id="map"></div>
         </div>
         <div id="list">
-          <div>
-            <h4 style="color:lightgrey;">What is this?</h4>
-            This is a potentially huge list of the EPCs described by the dataset you uploaded.
-            <br>
-            To bring it down to a manageable size, narrow your filter criteria using the checkboxes on the right.
-            <br>
-            Then click on any entry to see its recommendations.
-            <br><br>
-            <h4 style="color:lightgrey;">Can I view it on a map instead?</h4>
-            YES - if you have a CSV containing 'UPRN', 'Latitude', and 'Longitude' columns, <a id="load-location-csv-anchor-tag" href="#">click here to apply it</a>.
-            <br>
-            It will let you view this list as a map, which is much more intuitive.
-            <br>
-            If you have an equivalent AddressBase GPKG, then you can convert the relevant layer (blpu) to CSV with QGIS.
-            <br><br>
+          <div style="display:flex;width:90%;justify-content:space-evenly;padding-bottom:1em;">
+            <div style="width:100%;padding:0 5%;">
+              <h4 style="color:lightgrey;">What is this?</h4>
+              This is a potentially huge list of the EPCs described by the dataset you uploaded.
+              <br><br>
+              To bring it down to a manageable size, narrow your filter criteria using the checkboxes on the right.              
+              <br>
+              Then, click on any entry to see its recommendations.
+            </div>
+            <div style="width:100%;padding:0 5%;">
+              <h4 style="color:lightgrey;">Can I view it on a map instead?</h4>
+              YES - if you have a CSV containing 'UPRN', 'Latitude', and 'Longitude' columns, <a id="load-location-csv-anchor-tag" href="#">click here to apply it</a>.
+              <br><br>
+              It will let you view this list as a map, which is much more intuitive.
+              If you have an equivalent AddressBase GPKG, then you can convert the relevant layer (blpu) to CSV with QGIS.
+            </div>
           </div>     
           <div id="certificate-filters-section-list-view">
-            <div>
+            <div style="padding-bottom:0.5em;">
               <strong>Filter by...</strong>
             </div>
             <div id="list-view-filters">
@@ -87,18 +88,16 @@
                 </div>   
               </div>
             </div>
-            <template>
             <div style="width:100%;">
               <div style="text-align:left">
                 <h3><br>where address includes:</h3>
-                <input type="text" style="width:80%;">
+                <input id="address-includes-input" type="text" style="width:80%;">
               </div>
               <div style="text-align:left">
                 <h3>and recommendation text includes:</h3>
-                <input type="text" style="width:80%;">
+                <input id="rec-text-includes-input" type="text" style="width:80%;">
               </div>
             </div> 
-          </template>
           </div>
           <h3>
             EPC recommendations (items that match your criteria are highlighted in yellow)

@@ -3,6 +3,14 @@ import {epcRecCategories, shouldRecBeHighlighted, shortPaybackCheckbox,mediumPay
 
 let USE_MAP_FOR_RENDER = false; //whether we should use the map as the rendering output (otherwise we default to the list)
 
+let requiredAddressPhraseElement = document.getElementById("address-includes-input")
+requiredAddressPhraseElement.value = "";
+requiredAddressPhraseElement.oninput = ()=>{rerenderDatapoints()};
+
+let requiredRecTextPhraseElement = document.getElementById("rec-text-includes-input")
+requiredRecTextPhraseElement.value = "";
+requiredRecTextPhraseElement.oninput = ()=>{rerenderDatapoints()};
+
 function setMapInUse(b){
   USE_MAP_FOR_RENDER = b;
 
@@ -43,6 +51,16 @@ function rerenderDatapoints(){
     let ungeolocatedResults = [];
 
     let factorToMap = null;
+
+    let requiredAddressPhrase = requiredAddressPhraseElement.value.trim().toUpperCase();
+    if (requiredAddressPhrase == ""){
+      requiredAddressPhrase = null;
+    }
+
+    let requiredRecTextPhrase = requiredRecTextPhraseElement.value.trim().toUpperCase();
+    if (requiredRecTextPhrase == ""){
+      requiredRecTextPhrase = null;
+    }
 
     for (let i = 0; i < mappableFactors.length; i++){
       if (mappableFactors[i].radioButton != null && mappableFactors[i].radioButton.checked){
@@ -105,11 +123,26 @@ function rerenderDatapoints(){
       //if we reach this point, there's a chance that we should present this marker, but we haven't checked that the correct payback and the correct code occur in the same item yet, so we do that now:
 
       let isTrulyValid = false;
-
+      
       for (let i = 0; i < cert.recs.length; i++){ //if ANY REC in the cert is active under the current filter criteria
         if (shouldRecBeHighlighted(cert.recs[i])){
           isTrulyValid = true;
           break;
+        }
+      }
+
+      //if the entry is looking like it's valid so far, but then doesn't contain the required address phrase, if there is one
+      if (isTrulyValid && requiredAddressPhrase != null && ![cert.ADDRESS1,cert.ADDRESS2,cert.ADDRESS3,cert.POSTCODE].join(" ").replace("  "," ").toUpperCase().includes(requiredAddressPhrase)){
+        isTrulyValid = false;
+      }
+
+      //if the entry is looking like it's valid so far, but then doesn't contain the required rec text phrase, if there is one
+      if (isTrulyValid && requiredRecTextPhrase != null){
+        for (let i = 0; i < cert.recs.length; i++){ //if ANY REC in the cert is active under the current filter criteria
+          if (!cert.recs[i].RECOMMENDATION.toUpperCase().includes(requiredRecTextPhrase)){
+            isTrulyValid = false;
+            break;
+          }
         }
       }
 
