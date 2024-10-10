@@ -1,4 +1,4 @@
-import { mappableFactors, ungeolocatedResultsControl, composeAddress, spawnMapControls } from "./mapControls.js";
+import { mappableFactors, ungeolocatedResultsControl, composeAddress, spawnMapControls, spawnListControls } from "./mapControls.js";
 import {epcRecCategories, shouldRecBeHighlighted, shortPaybackCheckbox,mediumPaybackCheckbox,longPaybackCheckbox,otherPaybackCheckbox} from "./recFilterManager.js";
 
 let USE_MAP_FOR_RENDER = false; //whether we should use the map as the rendering output (otherwise we default to the list)
@@ -9,12 +9,14 @@ function setMapInUse(b){
   if (USE_MAP_FOR_RENDER){
     document.getElementById("map-parent").style = "";
     document.getElementById("list").style = "display:none;";
+    document.getElementById("list").innerHTML = "";
     map.invalidateSize();
-    document.getElementById("list-content").innerHTML = "";
+    spawnMapControls(map);
   } else {
     document.getElementById("map-parent").style = "display:none;";
     document.getElementById("list").style = "";
     map.invalidateSize();
+    spawnListControls();
   }
   rerenderDatapoints();  
 }

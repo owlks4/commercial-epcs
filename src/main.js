@@ -11,7 +11,6 @@ import {epcRecCategories} from "./recFilterManager.js";
 let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
 var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1] + BOUNDS[1][1]) / 2]).fitBounds(BOUNDS);
 L.tileLayer.provider("Esri.WorldStreetMap").addTo(map);
-spawnMapControls(map); //this also triggers some non-map related stuff relating to the list view filters that appear when not using the map
 
 setMapRenderVars(map);
 

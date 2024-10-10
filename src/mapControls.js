@@ -82,7 +82,7 @@ let fuels = {
 }
 
 let mappableFactors = [
-  new MappableFactor("None (default to blue)","NONE",null),
+  new MappableFactor("None","NONE",null),
   new MappableFactor("EPC band","ASSET_RATING_BAND",EPCbandColours),
   new MappableFactor("Main heating fuel","MAIN_HEATING_FUEL",fuels)
 ];
@@ -222,7 +222,7 @@ let ungeolocatedResultsControl = new UngeolocatedResultsControl();
 function populateListViewLegendCheckboxes(div, factor){
   div.innerHTML = "";
   let checkboxesArea = document.createElement("div");
-  checkboxesArea.style = "display:flex;padding-top:0.5em;justify-content:start;width:100%;overflow:hidden auto;flex-wrap:wrap;max-height:7em;"
+  checkboxesArea.id = "list-view-filters-legend-checkbox-area"
   Object.keys(factor.colScaleReference).forEach((key)=>{
     let chk = makeLegendCheckbox(key, factor.colScaleReference[key], factor);
     chk.style = "display:flex;margin-bottom:0.15em;margin-right:1em;"
@@ -236,17 +236,17 @@ function clearListViewLegendCheckboxes(div){
 }
 
 function spawnMapControls(map){
-    if (USE_MAP_FOR_RENDER){
-      factorSelectControl.addTo(map);
-      ungeolocatedResultsControl.addTo(map);
-    } else {
-      let lvf = document.getElementById("list-view-filters");
-      let legend = document.getElementById("list-view-filters-legend");
-      mappableFactors.forEach((factor,index) => {        
-        factor.generateRadioButtonAndAddToThisDiv(lvf, index == 0, populateListViewLegendCheckboxes, clearListViewLegendCheckboxes, legend);   
-        factor.radioButton.disabled = false;
-      });
-    }
+  ungeolocatedResultsControl.addTo(map);
+  factorSelectControl.addTo(map);
 }
 
-export {spawnMapControls, ungeolocatedResultsControl, mappableFactors, composeAddress}
+function spawnListControls(){
+  let lvf = document.getElementById("list-view-filters");
+  let legend = document.getElementById("list-view-filters-legend");
+  mappableFactors.forEach((factor,index) => {        
+    factor.generateRadioButtonAndAddToThisDiv(lvf, index == 0, populateListViewLegendCheckboxes, clearListViewLegendCheckboxes, legend);   
+    factor.radioButton.disabled = false;
+  });
+}
+
+export {spawnMapControls, spawnListControls, ungeolocatedResultsControl, mappableFactors, composeAddress}

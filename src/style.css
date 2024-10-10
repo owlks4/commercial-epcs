@@ -261,3 +261,16 @@ h1 {
   justify-content: space-between;
   flex-wrap: wrap;
 }
+
+#list-view-filters-legend-checkbox-area {
+  display:flex;
+  margin-top:0.25em;
+  justify-content:start;
+  width:100%;
+  overflow:hidden auto;
+  flex-wrap:wrap;
+  max-height:7em;
+  padding:0.3em 0.25em 0.25em 0.25em;
+  border: 1px solid gray;
+  border-radius: 0.5em;
+}
