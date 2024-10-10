@@ -1,4 +1,4 @@
-import { mappableFactors, ungeolocatedResultsControl, composeAddress } from "./mapControls.js";
+import { mappableFactors, ungeolocatedResultsControl, composeAddress, spawnMapControls } from "./mapControls.js";
 import {epcRecCategories, shouldRecBeHighlighted, shortPaybackCheckbox,mediumPaybackCheckbox,longPaybackCheckbox,otherPaybackCheckbox} from "./recFilterManager.js";
 
 let USE_MAP_FOR_RENDER = false; //whether we should use the map as the rendering output (otherwise we default to the list)
@@ -43,12 +43,12 @@ function rerenderDatapoints(){
     let factorToMap = null;
 
     for (let i = 0; i < mappableFactors.length; i++){
-      if (mappableFactors[i].radioButton.checked){
+      if (mappableFactors[i].radioButton != null && mappableFactors[i].radioButton.checked){
         factorToMap = mappableFactors[i];
       }
     }
 
-    if (factorToMap.internalName == "NONE"){
+    if (factorToMap != null && factorToMap.internalName == "NONE"){
       factorToMap = null;
     }
 

@@ -221,17 +221,14 @@ let ungeolocatedResultsControl = new UngeolocatedResultsControl();
 
 function populateListViewLegendCheckboxes(div, factor){
   div.innerHTML = "";
-  let legendTitle = document.createElement("div");
-  legendTitle.style="padding-top:0.5em;width:100%;"
-  legendTitle.innerHTML = "<strong>Legend</strong><br>"
-  div.appendChild(legendTitle);
   let checkboxesArea = document.createElement("div");
-  checkboxesArea.style = "display:flex;justify-content:space-between;width:100%;overflow:hidden auto;flex-wrap:wrap;max-height:7em;"
+  checkboxesArea.style = "display:flex;padding-top:0.5em;justify-content:start;width:100%;overflow:hidden auto;flex-wrap:wrap;max-height:7em;"
   Object.keys(factor.colScaleReference).forEach((key)=>{
-    checkboxesArea.appendChild(makeLegendCheckbox(key, factor.colScaleReference[key], factor));
+    let chk = makeLegendCheckbox(key, factor.colScaleReference[key], factor);
+    chk.style = "display:flex;margin-bottom:0.15em;margin-right:1em;"
+    checkboxesArea.appendChild(chk);
   });
   div.appendChild(checkboxesArea);
-  div.appendChild(document.createElement("br"));
 }
 
 function clearListViewLegendCheckboxes(div){
@@ -239,13 +236,13 @@ function clearListViewLegendCheckboxes(div){
 }
 
 function spawnMapControls(map){
-    factorSelectControl.addTo(map);
-    ungeolocatedResultsControl.addTo(map);
-    if (!USE_MAP_FOR_RENDER){
+    if (USE_MAP_FOR_RENDER){
+      factorSelectControl.addTo(map);
+      ungeolocatedResultsControl.addTo(map);
+    } else {
       let lvf = document.getElementById("list-view-filters");
       let legend = document.getElementById("list-view-filters-legend");
-      mappableFactors.forEach((factor,index) => {
-        console.log("The 'openAccordion' and 'closeAccordion' in the following line actually need to be replaced with equivalent functions that pipe the required data into the list view filter legend section, not the factorselectcontrol from map view")
+      mappableFactors.forEach((factor,index) => {        
         factor.generateRadioButtonAndAddToThisDiv(lvf, index == 0, populateListViewLegendCheckboxes, clearListViewLegendCheckboxes, legend);   
         factor.radioButton.disabled = false;
       });

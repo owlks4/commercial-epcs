@@ -37,7 +37,7 @@
           </div>     
           <div id="certificate-filters-section-list-view">
             <div>
-              <strong>Certificate filters</strong>
+              <strong>Filter by...</strong>
             </div>
             <div id="list-view-filters">
             </div>
@@ -49,9 +49,9 @@
           </div>
         </div>
         <div id="bar">
-          <div style="height:fit-content;display:flex;">
+          <div style="height:fit-content;display:flex;font-size:0.9em;">
             <div style="width:100%;">
-              <h3>Filter map to properties with<br>EPC recs pertaining to...</h3>
+              <h3>Filter by EPC recs pertaining to...</h3>
               <div id="epc-recs-filters">
               
               </div>   
@@ -86,18 +86,30 @@
                   <label for="co2-impact-high-checkbox">High</label>
                 </div>   
               </div>
-            </div>    
+            </div>
+            <template>
+            <div style="width:100%;">
+              <div style="text-align:left">
+                <h3><br>where address includes:</h3>
+                <input type="text" style="width:80%;">
+              </div>
+              <div style="text-align:left">
+                <h3>and recommendation text includes:</h3>
+                <input type="text" style="width:80%;">
+              </div>
+            </div> 
+          </template>
           </div>
           <h3>
             EPC recommendations (items that match your criteria are highlighted in yellow)
           </h3>
           <div id="recs-area">
             <p style="margin-top:3em;color:grey;font-weight:normal;">
-              Click a datapoint on the map to make its recommendations appear here.
+              &lt;- Click a property on the left to make its recommendations appear here.
               <br>
-              If the map datapoints haven't loaded yet, please wait about 10 seconds.
+              If the data hasn't loaded yet, please wait about 10 seconds.
               <br>
-              If it takes longer than 20 there might be an issue.
+              If it takes longer than 20 seconds, there might be an issue.
             </p>            
           </div>   
         </div>
