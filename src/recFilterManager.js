@@ -1,4 +1,4 @@
-import { rerenderDatapoints } from "./mapDataRender.js";
+import { rerenderDatapoints, requiredRecTextPhrase } from "./mapDataRender.js";
 
 let epcRecsFiltersElement = document.getElementById("epc-recs-filters");
 
@@ -49,7 +49,7 @@ function isFilterCheckboxCheckedForCO2Impact(impact){
 }
 
 function shouldRecBeHighlighted(rec){
-    return getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForCO2Impact(rec.CO2_IMPACT.toUpperCase()) && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase())
+    return getEPCRecCategoryByCode(rec.RECOMMENDATION_CODE).show && isFilterCheckboxCheckedForCO2Impact(rec.CO2_IMPACT.toUpperCase()) && isFilterCheckboxCheckedForPaybackType(rec.PAYBACK_TYPE.toUpperCase()) && (requiredRecTextPhrase == null ? true : rec.RECOMMENDATION.toUpperCase().includes(requiredRecTextPhrase));
   }
   
   class EPCRecCategory {

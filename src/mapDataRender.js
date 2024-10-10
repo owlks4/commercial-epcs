@@ -11,6 +11,8 @@ let requiredRecTextPhraseElement = document.getElementById("rec-text-includes-in
 requiredRecTextPhraseElement.value = "";
 requiredRecTextPhraseElement.oninput = ()=>{rerenderDatapoints()};
 
+let requiredRecTextPhrase = null; //unlike its adddress string counterpart, this is here rather than being a local variable in the rerenderDatapoints() function because it needs to be exported so that it can be used in recFilterManager.js
+
 function setMapInUse(b){
   USE_MAP_FOR_RENDER = b;
 
@@ -57,7 +59,7 @@ function rerenderDatapoints(){
       requiredAddressPhrase = null;
     }
 
-    let requiredRecTextPhrase = requiredRecTextPhraseElement.value.trim().toUpperCase();
+    requiredRecTextPhrase = requiredRecTextPhraseElement.value.trim().toUpperCase();
     if (requiredRecTextPhrase == ""){
       requiredRecTextPhrase = null;
     }
@@ -134,16 +136,6 @@ function rerenderDatapoints(){
       //if the entry is looking like it's valid so far, but then doesn't contain the required address phrase, if there is one
       if (isTrulyValid && requiredAddressPhrase != null && ![cert.ADDRESS1,cert.ADDRESS2,cert.ADDRESS3,cert.POSTCODE].join(" ").replace("  "," ").toUpperCase().includes(requiredAddressPhrase)){
         isTrulyValid = false;
-      }
-
-      //if the entry is looking like it's valid so far, but then doesn't contain the required rec text phrase, if there is one
-      if (isTrulyValid && requiredRecTextPhrase != null){
-        for (let i = 0; i < cert.recs.length; i++){ //if ANY REC in the cert is active under the current filter criteria
-          if (!cert.recs[i].RECOMMENDATION.toUpperCase().includes(requiredRecTextPhrase)){
-            isTrulyValid = false;
-            break;
-          }
-        }
       }
 
       if (cert.marker != null){ //delete the old one to ensure that it gets its new colour if required, when it's recreated immediately afterwards
@@ -321,4 +313,5 @@ function getAsHTMLList(ungeolocatedResults, factorToMap, displayLimit){ //this i
   return list;
 }
 
-export {rerenderDatapoints,setMapRenderVars,certificates,setCertificates,appendToCertificates,makeCircleMarker,loadStatsIntoPanel,getAsHTMLList,setMapInUse,USE_MAP_FOR_RENDER}
+export {rerenderDatapoints,setMapRenderVars,certificates,setCertificates,appendToCertificates,makeCircleMarker,
+        loadStatsIntoPanel,getAsHTMLList,setMapInUse,USE_MAP_FOR_RENDER,requiredRecTextPhrase}
