@@ -50,16 +50,17 @@
           </div>
         </div>
         <div id="bar">
-          <div style="height:fit-content;display:flex;font-size:0.9em;">
+          <h3 style="margin-bottom:0.5em;">Filter by EPC recs pertaining to...</h3>
+          <div style="height:fit-content;display:flex;font-size:0.9em;border:1px solid grey;padding: 1em 0;">
             <div style="width:100%;">
-              <h3>Filter by EPC recs pertaining to...</h3>
+              <h3 style="margin-top:0;padding-left:1em;">Energy category</h3>
               <div id="epc-recs-filters">
               
               </div>   
             </div>
             <div style="width:100%;">
               <div>
-                <h3><br>with payback time:</h3>
+                <h3 style="margin-top:0;">with payback time:</h3>
                 <div id="payback-time-filters">
                   <input type="checkbox" name="payback-time-short-checkbox" id="payback-time-short-checkbox" checked>
                   <label for="payback-time-short-checkbox">Short</label>
@@ -90,7 +91,7 @@
             </div>
             <div style="width:100%;">
               <div style="text-align:left">
-                <h3><br>where address includes:</h3>
+                <h3>where address includes:</h3>
                 <input id="address-includes-input" type="text" style="width:80%;">
               </div>
               <div style="text-align:left">
@@ -144,7 +145,7 @@
         The window will quickly (hopefully in under 10 seconds) populate itself from the data you have provided.
         <br>
         <br>
-        If you have a CSV file that relates UPRN numbers to Latitude and Longitude columns, you can also add
+        If you have a CSV file that relates a 'UPRN' column to Latitude and Longitude columns, you can also add
         <br>
         that at a later stage to turn the list into a map, which is often easier to browse.
         <br>

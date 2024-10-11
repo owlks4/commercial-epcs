@@ -132,6 +132,10 @@ input {
   text-align: left;
 }
 
+#epc-recs-filters {
+  padding-left:0.75em;
+}
+
 .control-panel-white {
   padding:1em 1em 0em 1em;
   background-color: rgba(255,255,255,0.9);
