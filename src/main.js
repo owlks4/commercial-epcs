@@ -96,12 +96,12 @@ async function tryLoadUPRNLookup(fileUrl){
             if (item.uprn == ""){
               return;
             }
-            if (item.longitude < BOUNDS[0][1] || item.longitude > BOUNDS[1][1]){
-              return;
-            }
-            if (item.latitude > BOUNDS[0][0] || item.latitude < BOUNDS[1][0]){
-              return;
-            }            
+            //if (item.longitude < BOUNDS[0][1] || item.longitude > BOUNDS[1][1]){
+            //  return;
+            //}
+            //if (item.latitude > BOUNDS[0][0] || item.latitude < BOUNDS[1][0]){
+            //  return;
+            //}
             UPRNLookup[item.uprn] = [item.latitude, item.longitude];
         });
         setMapInUse(true);
