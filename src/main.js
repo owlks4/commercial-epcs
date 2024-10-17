@@ -5,7 +5,7 @@ import "leaflet-providers";
 import { ZipReader, BlobReader, TextWriter } from '@zip.js/zip.js';
 import { parse } from 'papaparse';
 import {spawnMapControls, mappableFactors} from "./mapControls.js";
-import {setMapInUse, USE_MAP_FOR_RENDER, makeCircleMarker, setMapRenderVars, certificates, setCertificates, appendToCertificates, rerenderDatapoints} from "./mapDataRender.js";
+import {setMapInUse, USE_MAP_FOR_RENDER, setColumnDescriptor, makeCircleMarker, setMapRenderVars, certificates, setCertificates, appendToCertificates, rerenderDatapoints} from "./mapDataRender.js";
 import {epcRecCategories} from "./recFilterManager.js";
 
 let BOUNDS = [[52.470929538389235, -1.8681315185627474],[52.445207838077096, -1.806846604153346]];
@@ -13,6 +13,9 @@ var map = L.map('map').setView([(BOUNDS[0][0] + BOUNDS[1][0]) / 2, (BOUNDS[0][1]
 L.tileLayer.provider("Esri.WorldStreetMap").addTo(map);
 
 setMapRenderVars(map);
+
+let exportButton = document.getElementById("export-button");
+exportButton.onclick = () => {rerenderDatapoints(true)};
 
 let sourceZips = [];
 let numberOfZipsToLoad = 0;
@@ -56,7 +59,6 @@ function loadZipFileWithIndex(index){
 }
 
 let UPRNLookup = null;
-let columns = null;
 let recommendations = null;
 let schema = null;
 
@@ -139,9 +141,7 @@ async function tryLoadZipFromUrl(url) {
             case "columns.csv":
               let newColData = parse(await entry.getData(textWriter), {header:true});
               if (numberOfZipsLoaded == 0){
-                columns = newColData;
-              } else {
-                columns.data = columns.data.concat(newColData.data);
+                setColumnDescriptor(newColData);
               }
             break;
             case "recommendations.csv":
@@ -220,9 +220,9 @@ async function tryLoadZipFromUrl(url) {
             
             if (!failed){
                 if (index == parseInt(Math.floor(certsLength / 4))){
-                    console.log("25% complete")
+                    console.log("25% complete.")
                 } else if (index == parseInt(Math.floor(certsLength / 2))){
-                    console.log("50% complete. We won't bother listing 75...")
+                    console.log("50% complete.")
                 }
                 newCertsData.push(cert);
 

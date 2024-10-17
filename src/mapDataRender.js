@@ -1,5 +1,6 @@
 import { mappableFactors, ungeolocatedResultsControl, composeAddress, spawnMapControls, spawnListControls } from "./mapControls.js";
 import {epcRecCategories, shouldRecBeHighlighted, shortPaybackCheckbox,mediumPaybackCheckbox,longPaybackCheckbox,otherPaybackCheckbox} from "./recFilterManager.js";
+import { unparse } from "papaparse";
 
 let USE_MAP_FOR_RENDER = false; //whether we should use the map as the rendering output (otherwise we default to the list)
 
@@ -31,6 +32,12 @@ function setMapInUse(b){
   rerenderDatapoints();  
 }
 
+let columns = null;
+
+function setColumnDescriptor(newColDescriptor){
+    columns = newColDescriptor;
+}
+
 let map = null;
 let certificates = null;
 let mostRecentlySelectedCert = null;
@@ -48,7 +55,7 @@ function setMapRenderVars(_map){
     map = _map;
 }
 
-function rerenderDatapoints(){
+function rerenderDatapoints(shouldExport){
 
     let ungeolocatedResults = [];
 
@@ -158,12 +165,43 @@ function rerenderDatapoints(){
 
     if (USE_MAP_FOR_RENDER){ //if the map is in use, any ungeolocated addresses are sent to the control on the map
       ungeolocatedResultsControl.update(ungeolocatedResults, factorToMap);
+      if (shouldExport){
+        exportData([certificates.data.filter((cert) => {return cert.marker != null}), ungeolocatedResults]);
+      }
     } else { //otherwise, the ungeolocated addresses (i.e. all of them, because we have no map) are sent to the list
       document.getElementById("list-content").innerHTML = "";
       let list = getAsHTMLList(ungeolocatedResults, factorToMap, 2500);
       list.className = "html-list-hero";
       document.getElementById("list-content").appendChild(list);
+      if (shouldExport){
+        exportData([ungeolocatedResults])
+      }
     }    
+  }
+
+  function exportData(input){
+    input = input.flat();
+    
+    let columnsToExport = columns.data.filter((col) => {console.log(col.filename); return col.filename == "certificates.csv"});
+    console.log(columnsToExport);
+
+    let dataForExport = input.map((cert) => {
+      let obj = {};
+      columnsToExport.forEach(column => {
+        obj[column.column] = cert[column.column];
+      });
+      return obj;
+    })
+    console.log(dataForExport);
+    let csv = unparse(dataForExport);
+    let type = "text/csv";
+    let blob = new Blob([csv], {type});
+    let url = window.URL.createObjectURL(blob);
+    let anchor = document.createElement("a");
+    anchor.download = "extract";
+    anchor.href = url;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
   }
 
   function makeCircleMarker(cert, factorToMap){
@@ -314,4 +352,4 @@ function getAsHTMLList(ungeolocatedResults, factorToMap, displayLimit){ //this i
 }
 
 export {rerenderDatapoints,setMapRenderVars,certificates,setCertificates,appendToCertificates,makeCircleMarker,
-        loadStatsIntoPanel,getAsHTMLList,setMapInUse,USE_MAP_FOR_RENDER,requiredRecTextPhrase}
+        loadStatsIntoPanel,getAsHTMLList,setMapInUse,USE_MAP_FOR_RENDER,requiredRecTextPhrase, setColumnDescriptor}
