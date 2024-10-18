@@ -17,6 +17,7 @@
       <div class="flex">
         <div id="map-parent" style="display:none;">
           <div id="map"></div>
+          <button type="button" class="export-button">Export all entries in this data slice</button>
         </div>
         <div id="list">
           <div style="display:flex;width:90%;justify-content:space-evenly;padding-bottom:1em;">
@@ -48,9 +49,10 @@
           <div id="list-content">
             Loading...
           </div>
+          <button type="button" class="export-button">Export all entries in this data slice</button>
         </div>
         <div id="bar">
-          <h3 style="margin-bottom:0.5em;">Filter by EPC recs pertaining t<span id="export-button">o</span>...</h3>
+          <h3 style="margin-bottom:0.5em;">Filter by EPC recs pertaining t<span class="export-button">o</span>...</h3>
           <div style="height:fit-content;display:flex;font-size:0.9em;border:1px solid grey;padding: 0.9em 0;">
             <div style="width:100%;">
               <h3 style="margin-top:0;padding-left:1em;">Energy category</h3>
@@ -110,7 +112,7 @@
               <br>
               If it takes longer than 20 seconds, there might be an issue.
             </p>            
-          </div>   
+          </div>
         </div>
       </div>
     </main>

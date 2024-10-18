@@ -14,8 +14,10 @@ L.tileLayer.provider("Esri.WorldStreetMap").addTo(map);
 
 setMapRenderVars(map);
 
-let exportButton = document.getElementById("export-button");
-exportButton.onclick = () => {rerenderDatapoints(true)};
+let exportButtons = document.getElementsByClassName("export-button");
+for (let i = 0; i < exportButtons.length; i++){
+  exportButtons[i].onclick = () => {rerenderDatapoints(true)}
+}
 
 let sourceZips = [];
 let numberOfZipsToLoad = 0;

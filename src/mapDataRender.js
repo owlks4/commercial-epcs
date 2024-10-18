@@ -182,7 +182,7 @@ function rerenderDatapoints(shouldExport){
   function exportData(input){
     input = input.flat();
     
-    let columnsToExport = columns.data.filter((col) => {console.log(col.filename); return col.filename == "certificates.csv"});
+    let columnsToExport = columns.data.filter((col) => {return col.filename == "certificates.csv"});
     console.log(columnsToExport);
 
     let dataForExport = input.map((cert) => {
