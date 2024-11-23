@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+    <title>Commercial EPCs: certificate & recommendation viewer</title>
+    <script type="module" crossorigin src="https://owlks4.github.io/commercial-epcs/assets/index-BbwgJX7_.js"></script>
+    <link rel="stylesheet" crossorigin href="https://owlks4.github.io/commercial-epcs/assets/index-CdbffgLC.css">
+  </head>
+  <body>
+    <header>
+      <h1 style="margin:0; text-align:center;">
+        Commercial EPCs: certificate & recommendations viewer
+      </h1>
+    </header>
+    <main>
+      <div class="flex">
+        <div id="map-parent" style="display:none;">
+          <div id="map"></div>
+          <button type="button" class="export-button">Export all entries in this data slice</button>
+        </div>
+        <div id="list">
+          <div style="display:flex;width:90%;justify-content:space-evenly;padding-bottom:1em;">
+            <div style="width:100%;padding:0 5%;">
+              <h4 style="color:lightgrey;">What is this?</h4>
+              This is a potentially huge list of the EPCs described by the dataset you uploaded.
+              <br><br>
+              To bring it down to a manageable size, narrow your filter criteria using the checkboxes on the right.              
+              <br>
+              Then, click on any entry to see its recommendations.
+            </div>
+            <div style="width:100%;padding:0 5%;">
+              <h4 style="color:lightgrey;">Can I view it on a map instead?</h4>
+              YES - if you have a CSV containing 'UPRN', 'Latitude', and 'Longitude' columns, <a id="load-location-csv-anchor-tag" href="#">click here to apply it</a>.
+              <br><br>
+              It will let you view this list as a map, which is much more intuitive.
+              If you have an equivalent AddressBase GPKG, then you can convert the relevant layer (blpu) to CSV with QGIS.
+            </div>
+          </div>     
+          <div id="certificate-filters-section-list-view">
+            <div style="padding-bottom:0.5em;">
+              <strong>Filter by...</strong>
+            </div>
+            <div id="list-view-filters">
+            </div>
+            <div id="list-view-filters-legend">
+            </div>
+          </div>     
+          <div id="list-content">
+            Loading...
+          </div>
+          <button type="button" class="export-button">Export all entries in this data slice</button>
+        </div>
+        <div id="bar">
+          <h3 style="margin-bottom:0.5em;">Filter by EPC recs pertaining t<span class="export-button">o</span>...</h3>
+          <div style="height:fit-content;display:flex;font-size:0.9em;border:1px solid grey;padding: 0.9em 0;">
+            <div style="width:100%;">
+              <h3 style="margin-top:0;padding-left:1em;">Energy category</h3>
+              <div id="epc-recs-filters">
+              </div>   
+            </div>
+            <div style="width:100%;">
+              <div>
+                <h3 style="margin-top:0;">with payback time:</h3>
+                <div id="payback-time-filters">
+                  <input type="checkbox" name="payback-time-short-checkbox" id="payback-time-short-checkbox" checked>
+                  <label for="payback-time-short-checkbox">Short</label>
+                  <br>
+                  <input type="checkbox" name="payback-time-medium-checkbox" id="payback-time-medium-checkbox" checked>
+                  <label for="payback-time-medium-checkbox">Medium</label>
+                  <br>
+                  <input type="checkbox" name="payback-time-long-checkbox" id="payback-time-long-checkbox" checked>
+                  <label for="payback-time-long-checkbox">Long</label>
+                  <br>
+                  <input type="checkbox" name="payback-time-other-checkbox" id="payback-time-other-checkbox" checked>
+                  <label for="payback-time-other-checkbox">Other</label>
+                </div>   
+              </div>
+              <div>
+                <h3>and CO2 impact:</h3>
+                <div id="co2-impact-filters">
+                  <input type="checkbox" name="co2-impact-low-checkbox" id="co2-impact-low-checkbox" checked>
+                  <label for="co2-impact-low-checkbox">Low</label>
+                  <br>
+                  <input type="checkbox" name="co2-impact-medium-checkbox" id="co2-impact-medium-checkbox" checked>
+                  <label for="co2-impact-medium-checkbox">Medium</label>
+                  <br>
+                  <input type="checkbox" name="co2-impact-high-checkbox" id="co2-impact-high-checkbox" checked>
+                  <label for="co2-impact-high-checkbox">High</label>
+                </div>   
+              </div>
+            </div>
+            <div style="width:100%;">
+              <div style="text-align:left">
+                <h3>where address includes:</h3>
+                <input id="address-includes-input" type="text" style="width:80%;">
+              </div>
+              <div style="text-align:left">
+                <h3>and recommendation text includes:</h3>
+                <input id="rec-text-includes-input" type="text" style="width:80%;">
+              </div>
+            </div> 
+          </div>
+          <h3>
+            EPC recommendations (items that match your criteria are highlighted in yellow)
+          </h3>
+          <div id="recs-area">
+            <p style="margin-top:3em;color:grey;font-weight:normal;">
+              &lt;- Click a property on the left to make its recommendations appear here.
+              <br>
+              If the data hasn't loaded yet, please wait about 10 seconds.
+              <br>
+              If it takes longer than 20 seconds, there might be an issue.
+            </p>            
+          </div>
+        </div>
+      </div>
+    </main>
+    <div id="veil">
+        <h1>In order to use this page, you will need to provide at least one
+          <br>
+          commercial EPC data zip file from this government website:
+          <br>
+          <a target="_blank" href="https://epc.opendatacommunities.org/">https://epc.opendatacommunities.org/</a>
+        </h1>
+        <h2>
+        <br>
+        (this is so that I'm not redistributing the data, and so that you can be sure that what you're viewing is up to date).
+        <br>
+        <br>
+        It's easy to register for, and once you have, you should follow the link in your email.
+        <br>
+        <br>
+        Click 'Non-Domestic EPC' in the ribbon at the top of the page, and then select 'Constituency' ->
+        <br>
+        'Birmingham, Yardley' in the right hand panel. Finally, click the big green button to download the zip.
+        <br>
+        <br>
+        Because you can actually use more than one zip here, I recommend that you also download
+        <br>
+        the zip for 'Birmingham, Hall Green', so that Tyseley is fully encompassed.
+        <br>
+        <br>
+        Once you have the zips you require, come back to this window and click anywhere to upload them.
+        <br>
+        The window will quickly (hopefully in under 10 seconds) populate itself from the data you have provided.
+        <br>
+        <br>
+        If you have a CSV file that relates a 'UPRN' column to Latitude and Longitude columns, you can also add
+        <br>
+        that at a later stage to turn the list into a map, which is often easier to browse.
+        <br>
+        <br>
+        <br>
+        </h2>
+    </div> 
+  </body>
+</html>
